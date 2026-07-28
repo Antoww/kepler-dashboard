@@ -4,8 +4,8 @@ Dashboard web de Kepler, développé avec SvelteKit, TypeScript et Tailwind CSS.
 
 ## Prérequis
 
-- Node.js 22 LTS
-- npm 10+
+- Node.js 24 LTS
+- npm 11+
 
 ## Démarrage
 
@@ -23,7 +23,23 @@ npm run check     # vérification Svelte et TypeScript
 npm run lint      # lint et formatage
 npm run format    # applique le formatage
 npm run build     # build de production
+npm run preview   # build et prévisualisation dans Workers
+npm run deploy    # build et déploiement Cloudflare
 ```
+
+## Cloudflare Workers
+
+Le projet utilise l'adapter Cloudflare officiel et Wrangler.
+
+```bash
+cp .dev.vars.example .dev.vars
+npx wrangler login
+npm run preview
+npm run deploy
+```
+
+`.dev.vars` contient les secrets locaux et ne doit jamais être commité. Les secrets de
+production sont enregistrés avec `npx wrangler secret put NOM_DU_SECRET`.
 
 ## Architecture prévue
 

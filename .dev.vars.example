@@ -1,0 +1,11 @@
+ORIGIN=http://localhost:5173
+
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Générer avec : openssl rand -base64 32
+SESSION_SECRET=
