@@ -26,6 +26,14 @@ export interface DiscordSession {
 	user: DiscordUser;
 }
 
+export interface DiscordGuild {
+	id: string;
+	name: string;
+	icon: string | null;
+	owner: boolean;
+	permissions: string;
+}
+
 function basicAuthorization(config: AuthConfig): string {
 	return `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`;
 }
@@ -90,6 +98,56 @@ export async function getDiscordUser(accessToken: string): Promise<DiscordUser> 
 	});
 
 	return parseDiscordResponse<DiscordUser>(response);
+}
+
+async function getGuildPage(authorization: string, after?: string): Promise<DiscordGuild[]> {
+	const url = new URL(`${DISCORD_API}/users/@me/guilds`);
+	url.searchParams.set('limit', '200');
+	if (after) url.searchParams.set('after', after);
+
+	const response = await fetch(url, {
+		headers: {
+			Authorization: authorization,
+			'User-Agent': USER_AGENT
+		}
+	});
+
+	return parseDiscordResponse<DiscordGuild[]>(response);
+}
+
+export function canManageGuild(guild: DiscordGuild): boolean {
+	if (guild.owner) return true;
+
+	const permissions = BigInt(guild.permissions);
+	const administrator = 1n << 3n;
+	const manageGuild = 1n << 5n;
+
+	return (
+		(permissions & administrator) === administrator || (permissions & manageGuild) === manageGuild
+	);
+}
+
+export async function getManageableGuilds(accessToken: string): Promise<DiscordGuild[]> {
+	const guilds = await getGuildPage(`Bearer ${accessToken}`);
+	return guilds
+		.filter(canManageGuild)
+		.sort((first, second) => first.name.localeCompare(second.name));
+}
+
+export async function getBotGuildIds(botToken: string): Promise<Set<string>> {
+	const guildIds = new Set<string>();
+	let after: string | undefined;
+
+	while (true) {
+		const guilds = await getGuildPage(`Bot ${botToken}`, after);
+		for (const guild of guilds) guildIds.add(guild.id);
+
+		if (guilds.length < 200) break;
+		after = guilds.at(-1)?.id;
+		if (!after) break;
+	}
+
+	return guildIds;
 }
 
 export async function revokeDiscordToken(token: string, config: AuthConfig): Promise<void> {

@@ -27,3 +27,7 @@ export function getAuthConfig(): AuthConfig {
 		sessionSecret: requireSecret('SESSION_SECRET')
 	};
 }
+
+export function getBotToken(): string {
+	return requireSecret('DISCORD_BOT_TOKEN');
+}

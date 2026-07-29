@@ -17,6 +17,14 @@ export default ts.config(
 	prettier,
 	...svelte.configs.prettier,
 	{
+		files: ['**/*.svelte'],
+		languageOptions: {
+			parserOptions: {
+				parser: ts.parser
+			}
+		}
+	},
+	{
 		languageOptions: {
 			globals: { ...globals.browser, ...globals.node }
 		}
