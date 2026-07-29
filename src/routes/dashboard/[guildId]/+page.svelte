@@ -391,6 +391,44 @@
 					</button>
 				</div>
 			</form>
+
+			<div class="mt-8 border-t border-white/10 pt-7">
+				<div class="flex flex-wrap items-center justify-between gap-5">
+					<div>
+						<h3 class="font-semibold">Publication Discord</h3>
+						<p class="mt-2 max-w-2xl text-sm text-zinc-500">
+							Un nouveau panneau sera envoyé. Si un précédent message est mémorisé, il sera ensuite
+							supprimé automatiquement.
+						</p>
+					</div>
+
+					<form
+						method="POST"
+						action="?/publishTickets"
+						onsubmit={(event) => {
+							if (!confirm('Publier un nouveau panneau de tickets dans Discord ?')) {
+								event.preventDefault();
+							}
+						}}
+					>
+						<button
+							type="submit"
+							class="rounded-xl border border-violet-400/30 bg-violet-400/10 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
+						>
+							{data.config.ticketPanelMessageId ? 'Remplacer le panneau' : 'Publier le panneau'}
+						</button>
+					</form>
+				</div>
+
+				{#if form?.section === 'publishTickets' && form.message}
+					<div
+						class="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
+						role="status"
+					>
+						{form.message}
+					</div>
+				{/if}
+			</div>
 		</section>
 	</main>
 </div>

@@ -19,6 +19,8 @@ export interface ServerConfigRow {
 	ticket_button_label?: string | null;
 	ticket_button_emoji?: string | null;
 	ticket_button_style?: string | null;
+	ticket_panel_message_id?: string | null;
+	ticket_panel_published_channel_id?: string | null;
 	timezone?: string | null;
 	created_at?: string;
 	updated_at?: string;
@@ -97,6 +99,23 @@ export async function updateTicketConfig(
 			},
 			{ onConflict: 'guild_id' }
 		);
+
+	if (error) throw error;
+}
+
+export async function updatePublishedTicketPanel(
+	guildId: string,
+	channelId: string,
+	messageId: string
+): Promise<void> {
+	const { error } = await getSupabase()
+		.from('server_configs')
+		.update({
+			ticket_panel_published_channel_id: channelId,
+			ticket_panel_message_id: messageId,
+			updated_at: new Date().toISOString()
+		})
+		.eq('guild_id', guildId);
 
 	if (error) throw error;
 }

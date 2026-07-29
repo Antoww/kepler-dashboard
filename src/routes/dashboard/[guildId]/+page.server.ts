@@ -1,15 +1,18 @@
 import { getBotToken } from '$lib/server/auth/config';
 import {
+	deleteDiscordMessage,
 	getBotGuildIds,
 	getGuildCategories,
 	getGuildChannels,
 	getGuildRoles,
-	getManageableGuilds
+	getManageableGuilds,
+	publishTicketPanel
 } from '$lib/server/auth/discord';
 import { getSession } from '$lib/server/auth/session';
 import {
 	getServerConfig,
 	updateGeneralConfig,
+	updatePublishedTicketPanel,
 	updateTicketConfig
 } from '$lib/server/database/supabase';
 import { error, fail, redirect } from '@sveltejs/kit';
@@ -92,7 +95,9 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 				'Cliquez sur le bouton ci-dessous pour ouvrir un ticket privé avec l’équipe du serveur.',
 			ticketButtonLabel: serverConfig?.ticket_button_label || 'Ouvrir un ticket',
 			ticketButtonEmoji: serverConfig?.ticket_button_emoji ?? '🎫',
-			ticketButtonStyle: serverConfig?.ticket_button_style || 'Primary'
+			ticketButtonStyle: serverConfig?.ticket_button_style || 'Primary',
+			ticketPanelMessageId: serverConfig?.ticket_panel_message_id || '',
+			ticketPanelPublishedChannelId: serverConfig?.ticket_panel_published_channel_id || ''
 		},
 		channels: channels.map(({ id, name }) => ({ id, name })),
 		categories: categories.map(({ id, name }) => ({ id, name })),
@@ -228,5 +233,84 @@ export const actions: Actions = {
 		}
 
 		return { success: true, section: 'tickets', message: 'Configuration des tickets enregistrée.' };
+	},
+	publishTickets: async ({ cookies, params }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		const guild = (await getManageableGuilds(session.accessToken)).find(
+			(candidate) => candidate.id === guildId
+		);
+		if (!guild) return fail(403, { message: "Tu n'as plus la permission de gérer ce serveur." });
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, { message: "Kepler n'est plus présent sur ce serveur." });
+		}
+
+		const config = await getServerConfig(guildId);
+		if (
+			!config?.ticket_panel_channel_id ||
+			!config.ticket_category_id ||
+			!config.ticket_log_channel_id ||
+			!config.ticket_support_role_id ||
+			!config.ticket_panel_title ||
+			!config.ticket_panel_message ||
+			!config.ticket_button_label
+		) {
+			return fail(400, { message: 'Configure entièrement le module Tickets avant publication.' });
+		}
+
+		let publishedMessage: { id: string; channel_id: string };
+		try {
+			publishedMessage = await publishTicketPanel(config.ticket_panel_channel_id, botToken, {
+				title: config.ticket_panel_title,
+				message: config.ticket_panel_message,
+				buttonLabel: config.ticket_button_label,
+				buttonEmoji: config.ticket_button_emoji || null,
+				buttonStyle: config.ticket_button_style || 'Primary',
+				guildName: guild.name
+			});
+		} catch (cause) {
+			console.error('Unable to publish ticket panel', cause);
+			return fail(502, { message: "Le panneau n'a pas pu être envoyé dans Discord." });
+		}
+
+		try {
+			await updatePublishedTicketPanel(guildId, publishedMessage.channel_id, publishedMessage.id);
+		} catch (cause) {
+			console.error('Unable to persist published ticket panel', cause);
+			await deleteDiscordMessage(publishedMessage.channel_id, publishedMessage.id, botToken).catch(
+				(deleteCause) => console.error('Unable to rollback ticket panel publication', deleteCause)
+			);
+			return fail(502, { message: "La publication n'a pas pu être mémorisée dans Supabase." });
+		}
+
+		let oldPanelRemoved = true;
+		if (
+			config.ticket_panel_message_id &&
+			config.ticket_panel_published_channel_id &&
+			config.ticket_panel_message_id !== publishedMessage.id
+		) {
+			try {
+				await deleteDiscordMessage(
+					config.ticket_panel_published_channel_id,
+					config.ticket_panel_message_id,
+					botToken
+				);
+			} catch (cause) {
+				oldPanelRemoved = false;
+				console.error('Unable to remove previous ticket panel', cause);
+			}
+		}
+
+		return {
+			success: true,
+			section: 'publishTickets',
+			message: oldPanelRemoved
+				? 'Nouveau panneau publié. L’ancien panneau a été retiré.'
+				: "Nouveau panneau publié, mais l'ancien message n'a pas pu être supprimé."
+		};
 	}
 };

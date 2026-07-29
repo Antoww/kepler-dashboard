@@ -228,6 +228,92 @@ export async function getGuildRoles(guildId: string, botToken: string): Promise<
 		.sort((first, second) => second.position - first.position);
 }
 
+interface TicketPanelPayload {
+	title: string;
+	message: string;
+	buttonLabel: string;
+	buttonEmoji: string | null;
+	buttonStyle: string;
+	guildName: string;
+}
+
+function discordEmoji(value: string): { id?: string; name: string; animated?: boolean } {
+	const customEmoji = value.match(/^<(a?):([A-Za-z0-9_]+):(\d+)>$/u);
+	if (customEmoji) {
+		return {
+			animated: customEmoji[1] === 'a',
+			name: customEmoji[2],
+			id: customEmoji[3]
+		};
+	}
+
+	return { name: value };
+}
+
+export async function publishTicketPanel(
+	channelId: string,
+	botToken: string,
+	panel: TicketPanelPayload
+): Promise<{ id: string; channel_id: string }> {
+	const style = (
+		{
+			Primary: 1,
+			Secondary: 2,
+			Success: 3,
+			Danger: 4
+		} as Record<string, number>
+	)[panel.buttonStyle];
+	const button: Record<string, unknown> = {
+		type: 2,
+		style: style ?? 1,
+		custom_id: 'ticket:open',
+		label: panel.buttonLabel
+	};
+	if (panel.buttonEmoji) button.emoji = discordEmoji(panel.buttonEmoji);
+
+	const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'Content-Type': 'application/json',
+			'User-Agent': USER_AGENT
+		},
+		body: JSON.stringify({
+			embeds: [
+				{
+					color: 0x5f91c4,
+					title: panel.title,
+					description: panel.message,
+					footer: { text: panel.guildName },
+					timestamp: new Date().toISOString()
+				}
+			],
+			components: [{ type: 1, components: [button] }],
+			allowed_mentions: { parse: [] }
+		})
+	});
+
+	return parseDiscordResponse<{ id: string; channel_id: string }>(response);
+}
+
+export async function deleteDiscordMessage(
+	channelId: string,
+	messageId: string,
+	botToken: string
+): Promise<void> {
+	const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages/${messageId}`, {
+		method: 'DELETE',
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'User-Agent': USER_AGENT
+		}
+	});
+
+	if (!response.ok && response.status !== 404) {
+		throw new Error(`Discord message deletion failed (${response.status})`);
+	}
+}
+
 export async function revokeDiscordToken(token: string, config: AuthConfig): Promise<void> {
 	const response = await fetch(`${DISCORD_API}/oauth2/token/revoke`, {
 		method: 'POST',
