@@ -4,6 +4,7 @@ import {
 	getBotGuildIds,
 	getGuildCategories,
 	getGuildChannels,
+	getGuildResources,
 	getGuildRoles,
 	getGuildStats,
 	getManageableGuilds,
@@ -11,6 +12,7 @@ import {
 } from '$lib/server/auth/discord';
 import { getSession } from '$lib/server/auth/session';
 import {
+	getServerActivity,
 	getServerConfig,
 	updateGeneralConfig,
 	updatePublishedTicketPanel,
@@ -46,20 +48,22 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	const botGuildIds = await getBotGuildIds(botToken);
 	if (!botGuildIds.has(guild.id)) error(404, "Kepler n'est pas installé sur ce serveur.");
 
-	const [channels, categories, roles, guildStats] = await Promise.all([
-		getGuildChannels(guild.id, botToken),
-		getGuildCategories(guild.id, botToken),
-		getGuildRoles(guild.id, botToken),
-		getGuildStats(guild.id, botToken)
-	]);
-
 	let serverConfig;
+	let activity;
+	let resources;
+	let guildStats;
 	try {
-		serverConfig = await getServerConfig(guild.id);
+		[serverConfig, activity, resources, guildStats] = await Promise.all([
+			getServerConfig(guild.id),
+			getServerActivity(guild.id),
+			getGuildResources(guild.id, botToken),
+			getGuildStats(guild.id, botToken)
+		]);
 	} catch (cause) {
-		console.error('Unable to read server config from Supabase', cause);
-		error(502, 'Impossible de lire la configuration du serveur pour le moment.');
+		console.error('Unable to load guild dashboard data', cause);
+		error(502, 'Impossible de charger les données du serveur pour le moment.');
 	}
+	const { channels, categories, roles } = resources;
 
 	return {
 		guild: {
@@ -114,6 +118,7 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 			categoryCount: categories.length,
 			configurableRoleCount: roles.length
 		},
+		activity,
 		timezones: TIMEZONES,
 		ticketStyles: TICKET_STYLES
 	};

@@ -26,6 +26,8 @@
 	let ticketButtonLabel = $state('');
 	let ticketButtonEmoji = $state('');
 	let ticketButtonStyle = $state('Primary');
+	let statsView = $state<'server' | 'activity'>('server');
+	let activityPeriod = $state<7 | 30 | 90>(30);
 
 	$effect(() => {
 		ticketPanelTitle = data.config.ticketPanelTitle;
@@ -104,6 +106,27 @@
 			icon: Languages
 		}
 	]);
+	const activityRows = $derived.by(() => {
+		const cutoff = new Date(Date.now() - activityPeriod * 24 * 60 * 60 * 1000);
+		const cutoffKey = cutoff.toISOString().slice(0, 10);
+		return data.activity.filter((row) => row.date >= cutoffKey);
+	});
+	const activityTotals = $derived({
+		messages: activityRows.reduce((total, row) => total + row.messages, 0),
+		commands: activityRows.reduce((total, row) => total + row.commands, 0)
+	});
+	const activityMax = $derived(
+		Math.max(1, ...activityRows.flatMap((row) => [row.messages, row.commands]))
+	);
+	function activityPoints(metric: 'messages' | 'commands') {
+		return activityRows
+			.map((row, index) => {
+				const x = activityRows.length === 1 ? 400 : (index / (activityRows.length - 1)) * 760 + 20;
+				const y = 220 - (row[metric] / activityMax) * 190;
+				return `${x},${y}`;
+			})
+			.join(' ');
+	}
 
 	const modules = $derived([
 		{
@@ -317,41 +340,153 @@
 					{#if activeTab === 'stats'}
 						<section class="mt-10">
 							<div>
-								<p class="text-sm font-medium text-violet-300">Statistiques Discord</p>
-								<h2 class="mt-2 text-2xl font-semibold">Aperçu du serveur</h2>
+								<p class="text-sm font-medium text-violet-300">Statistiques</p>
+								<h2 class="mt-2 text-2xl font-semibold">
+									{statsView === 'server' ? 'Aperçu du serveur' : 'Activité suivie par Kepler'}
+								</h2>
 								<p class="mt-2 text-sm text-zinc-500">
-									Données actuelles fournies par Discord lors du chargement de la page.
+									{statsView === 'server'
+										? 'Informations générales fournies par Discord.'
+										: 'Messages et commandes enregistrés quotidiennement par le bot.'}
 								</p>
 							</div>
 
-							<div class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-								{#each serverStats as stat (stat.label)}
-									{@const Icon = stat.icon}
-									<article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-										<div class="flex items-start justify-between gap-4">
-											<div>
-												<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">
-													{stat.label}
-												</p>
-												<p class="mt-3 text-3xl font-semibold tracking-tight">{stat.value}</p>
-												<p class="mt-2 text-sm text-zinc-600">{stat.detail}</p>
-											</div>
-											<div
-												class="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-300"
-											>
-												<Icon size={20} strokeWidth={1.8} aria-hidden="true" />
-											</div>
-										</div>
-									</article>
+							<div
+								class="mt-6 flex w-fit gap-1 rounded-xl border border-white/[0.08] bg-black/15 p-1"
+							>
+								{#each [['server', 'Serveur'], ['activity', 'Activité']] as view (view[0])}
+									<button
+										type="button"
+										onclick={() => (statsView = view[0] as typeof statsView)}
+										class={[
+											'rounded-lg px-4 py-2 text-sm font-medium transition',
+											statsView === view[0]
+												? 'bg-violet-500/15 text-violet-300'
+												: 'text-zinc-500 hover:text-zinc-200'
+										]}
+									>
+										{view[1]}
+									</button>
 								{/each}
 							</div>
 
-							<div
-								class="mt-5 rounded-2xl border border-white/[0.07] bg-black/10 px-5 py-4 text-sm text-zinc-500"
-							>
-								Le nombre de membres en ligne est une estimation communiquée par Discord. Les rôles
-								gérés par des intégrations ne sont pas inclus dans le total configurable.
-							</div>
+							{#if statsView === 'server'}
+								<div class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+									{#each serverStats as stat (stat.label)}
+										{@const Icon = stat.icon}
+										<article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+											<div class="flex items-start justify-between gap-4">
+												<div>
+													<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">
+														{stat.label}
+													</p>
+													<p class="mt-3 text-3xl font-semibold tracking-tight">{stat.value}</p>
+													<p class="mt-2 text-sm text-zinc-600">{stat.detail}</p>
+												</div>
+												<div
+													class="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-300"
+												>
+													<Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+												</div>
+											</div>
+										</article>
+									{/each}
+								</div>
+
+								<div
+									class="mt-5 rounded-2xl border border-white/[0.07] bg-black/10 px-5 py-4 text-sm text-zinc-500"
+								>
+									Les informations Discord sont conservées cinq minutes pour limiter les appels à
+									l’API. Le nombre de membres en ligne reste une estimation fournie par Discord.
+								</div>
+							{:else}
+								<div class="mt-7 rounded-2xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+									<div class="flex flex-wrap items-start justify-between gap-5">
+										<div class="flex gap-8">
+											<div>
+												<p class="text-xs tracking-wider text-zinc-500 uppercase">Messages</p>
+												<p class="mt-2 text-2xl font-semibold">
+													{numberFormat.format(activityTotals.messages)}
+												</p>
+											</div>
+											<div>
+												<p class="text-xs tracking-wider text-zinc-500 uppercase">Commandes</p>
+												<p class="mt-2 text-2xl font-semibold">
+													{numberFormat.format(activityTotals.commands)}
+												</p>
+											</div>
+										</div>
+										<div class="flex gap-1 rounded-lg bg-black/20 p-1">
+											{#each [7, 30, 90] as period (period)}
+												<button
+													type="button"
+													onclick={() => (activityPeriod = period as typeof activityPeriod)}
+													class={[
+														'rounded-md px-3 py-1.5 text-xs font-medium transition',
+														activityPeriod === period
+															? 'bg-white/10 text-white'
+															: 'text-zinc-600 hover:text-zinc-300'
+													]}
+												>
+													{period} j
+												</button>
+											{/each}
+										</div>
+									</div>
+
+									{#if activityRows.length}
+										<div class="mt-8 overflow-hidden rounded-xl bg-black/15 p-3">
+											<svg
+												viewBox="0 0 800 240"
+												class="h-auto w-full"
+												role="img"
+												aria-label={`Activité des ${activityPeriod} derniers jours`}
+											>
+												{#each [30, 77.5, 125, 172.5, 220] as y (y)}
+													<line
+														x1="20"
+														x2="780"
+														y1={y}
+														y2={y}
+														stroke="rgba(255,255,255,0.06)"
+														stroke-width="1"
+													/>
+												{/each}
+												<polyline
+													points={activityPoints('messages')}
+													fill="none"
+													stroke="#8b5cf6"
+													stroke-width="4"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+												<polyline
+													points={activityPoints('commands')}
+													fill="none"
+													stroke="#34d399"
+													stroke-width="4"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+											</svg>
+										</div>
+										<div class="mt-4 flex flex-wrap gap-5 text-xs text-zinc-500">
+											<span class="flex items-center gap-2">
+												<span class="size-2 rounded-full bg-violet-500"></span> Messages
+											</span>
+											<span class="flex items-center gap-2">
+												<span class="size-2 rounded-full bg-emerald-400"></span> Commandes
+											</span>
+										</div>
+									{:else}
+										<div
+											class="mt-8 rounded-xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-zinc-500"
+										>
+											Aucune activité enregistrée sur cette période.
+										</div>
+									{/if}
+								</div>
+							{/if}
 						</section>
 					{/if}
 

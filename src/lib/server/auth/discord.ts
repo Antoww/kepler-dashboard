@@ -60,6 +60,17 @@ export interface DiscordGuildStats {
 	preferredLocale: string;
 }
 
+export interface DiscordGuildResources {
+	channels: DiscordChannel[];
+	categories: DiscordChannel[];
+	roles: DiscordRole[];
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const guildStatsCache = new Map<string, { expiresAt: number; value: DiscordGuildStats }>();
+const guildResourcesCache = new Map<string, { expiresAt: number; value: DiscordGuildResources }>();
+let botGuildIdsCache: { expiresAt: number; value: Set<string> } | null = null;
+
 function basicAuthorization(config: AuthConfig): string {
 	return `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`;
 }
@@ -161,6 +172,8 @@ export async function getManageableGuilds(accessToken: string): Promise<DiscordG
 }
 
 export async function getBotGuildIds(botToken: string): Promise<Set<string>> {
+	if (botGuildIdsCache && botGuildIdsCache.expiresAt > Date.now()) return botGuildIdsCache.value;
+
 	const guildIds = new Set<string>();
 	let after: string | undefined;
 
@@ -173,6 +186,7 @@ export async function getBotGuildIds(botToken: string): Promise<Set<string>> {
 		if (!after) break;
 	}
 
+	botGuildIdsCache = { expiresAt: Date.now() + CACHE_TTL_MS, value: guildIds };
 	return guildIds;
 }
 
@@ -189,6 +203,9 @@ export async function getBotApplicationId(botToken: string): Promise<string> {
 }
 
 export async function getGuildStats(guildId: string, botToken: string): Promise<DiscordGuildStats> {
+	const cached = guildStatsCache.get(guildId);
+	if (cached && cached.expiresAt > Date.now()) return cached.value;
+
 	const response = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
 		headers: {
 			Authorization: `Bot ${botToken}`,
@@ -203,13 +220,53 @@ export async function getGuildStats(guildId: string, botToken: string): Promise<
 		preferred_locale?: string;
 	}>(response);
 
-	return {
+	const stats = {
 		memberCount: guild.approximate_member_count ?? 0,
 		onlineCount: guild.approximate_presence_count ?? 0,
 		boostCount: guild.premium_subscription_count ?? 0,
 		boostLevel: guild.premium_tier ?? 0,
 		preferredLocale: guild.preferred_locale ?? 'fr'
 	};
+	guildStatsCache.set(guildId, { expiresAt: Date.now() + CACHE_TTL_MS, value: stats });
+	return stats;
+}
+
+export async function getGuildResources(
+	guildId: string,
+	botToken: string
+): Promise<DiscordGuildResources> {
+	const cached = guildResourcesCache.get(guildId);
+	if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+	const headers = {
+		Authorization: `Bot ${botToken}`,
+		'User-Agent': USER_AGENT
+	};
+	const [channelsResponse, rolesResponse] = await Promise.all([
+		fetch(`${DISCORD_API}/guilds/${guildId}/channels`, { headers }),
+		fetch(`${DISCORD_API}/guilds/${guildId}/roles`, { headers })
+	]);
+	const [allChannels, allRoles] = await Promise.all([
+		parseDiscordResponse<DiscordChannel[]>(channelsResponse),
+		parseDiscordResponse<DiscordRole[]>(rolesResponse)
+	]);
+	const resources = {
+		channels: allChannels
+			.filter((channel) => channel.type === 0 || channel.type === 5)
+			.sort((first, second) => first.position - second.position),
+		categories: allChannels
+			.filter((channel) => channel.type === 4)
+			.sort((first, second) => first.position - second.position),
+		roles: allRoles
+			.filter((role) => role.id !== guildId && !role.managed)
+			.sort((first, second) => second.position - first.position)
+	};
+
+	guildResourcesCache.set(guildId, {
+		expiresAt: Date.now() + CACHE_TTL_MS,
+		value: resources
+	});
+	return resources;
 }
 
 export async function getGuildChannels(

@@ -53,6 +53,33 @@ export async function getServerConfig(guildId: string): Promise<ServerConfigRow 
 	return data as ServerConfigRow | null;
 }
 
+export interface DailyActivityRow {
+	date: string;
+	commands: number;
+	messages: number;
+	users: number;
+}
+
+export async function getServerActivity(guildId: string, days = 90): Promise<DailyActivityRow[]> {
+	const startDate = new Date();
+	startDate.setUTCDate(startDate.getUTCDate() - days);
+
+	const { data, error } = await getSupabase()
+		.from('daily_stats')
+		.select('stat_date, total_commands, total_messages, unique_users')
+		.eq('guild_id', guildId)
+		.gte('stat_date', startDate.toISOString().slice(0, 10))
+		.order('stat_date', { ascending: true });
+
+	if (error) throw error;
+	return (data ?? []).map((row) => ({
+		date: row.stat_date,
+		commands: row.total_commands ?? 0,
+		messages: row.total_messages ?? 0,
+		users: row.unique_users ?? 0
+	}));
+}
+
 export async function updateGeneralConfig(
 	guildId: string,
 	values: Partial<
