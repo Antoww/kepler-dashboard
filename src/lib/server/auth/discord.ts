@@ -34,6 +34,10 @@ export interface DiscordGuild {
 	permissions: string;
 }
 
+interface DiscordApplication {
+	id: string;
+}
+
 function basicAuthorization(config: AuthConfig): string {
 	return `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`;
 }
@@ -148,6 +152,18 @@ export async function getBotGuildIds(botToken: string): Promise<Set<string>> {
 	}
 
 	return guildIds;
+}
+
+export async function getBotApplicationId(botToken: string): Promise<string> {
+	const response = await fetch(`${DISCORD_API}/oauth2/applications/@me`, {
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'User-Agent': USER_AGENT
+		}
+	});
+	const application = await parseDiscordResponse<DiscordApplication>(response);
+
+	return application.id;
 }
 
 export async function revokeDiscordToken(token: string, config: AuthConfig): Promise<void> {
