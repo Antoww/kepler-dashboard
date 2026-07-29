@@ -31,3 +31,10 @@ export function getAuthConfig(): AuthConfig {
 export function getBotToken(): string {
 	return requireSecret('DISCORD_BOT_TOKEN');
 }
+
+export function getSupabaseConfig(): { url: string; serviceRoleKey: string } {
+	return {
+		url: requireSecret('SUPABASE_URL'),
+		serviceRoleKey: requireSecret('SUPABASE_SERVICE_ROLE_KEY')
+	};
+}
