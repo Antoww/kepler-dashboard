@@ -4,12 +4,37 @@
 
 	let { data, form } = $props();
 	let activeTab = $state<'overview' | 'general' | 'reports' | 'tickets'>('overview');
+	let ticketPanelTitle = $state('');
+	let ticketPanelMessage = $state('');
+	let ticketButtonLabel = $state('');
+	let ticketButtonEmoji = $state('');
+	let ticketButtonStyle = $state('Primary');
 
 	$effect(() => {
-		if (form?.section === 'tickets' || form?.section === 'publishTickets') activeTab = 'tickets';
+		ticketPanelTitle = data.config.ticketPanelTitle;
+		ticketPanelMessage = data.config.ticketPanelMessage;
+		ticketButtonLabel = data.config.ticketButtonLabel;
+		ticketButtonEmoji = data.config.ticketButtonEmoji;
+		ticketButtonStyle = data.config.ticketButtonStyle;
+	});
+
+	$effect(() => {
+		if (
+			form?.section === 'tickets' ||
+			form?.section === 'publishTickets' ||
+			form?.section === 'deleteTicketPanel'
+		)
+			activeTab = 'tickets';
 		else if (form?.section === 'reports') activeTab = 'reports';
 		else if (form?.section === 'general') activeTab = 'general';
 	});
+
+	const ticketButtonClasses: Record<string, string> = {
+		Primary: 'bg-indigo-500 text-white',
+		Secondary: 'bg-zinc-500 text-white',
+		Success: 'bg-emerald-600 text-white',
+		Danger: 'bg-red-600 text-white'
+	};
 
 	const modules = $derived([
 		{
@@ -439,7 +464,7 @@
 							name="ticket_panel_title"
 							required
 							maxlength="256"
-							value={data.config.ticketPanelTitle}
+							bind:value={ticketPanelTitle}
 							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 						/>
 					</label>
@@ -451,9 +476,9 @@
 							required
 							maxlength="2000"
 							rows="4"
+							bind:value={ticketPanelMessage}
 							class="resize-y rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-							>{data.config.ticketPanelMessage}</textarea
-						>
+						></textarea>
 					</label>
 
 					<label class="grid gap-2 text-sm">
@@ -462,7 +487,7 @@
 							name="ticket_button_label"
 							required
 							maxlength="80"
-							value={data.config.ticketButtonLabel}
+							bind:value={ticketButtonLabel}
 							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 						/>
 					</label>
@@ -473,7 +498,7 @@
 							<input
 								name="ticket_button_emoji"
 								maxlength="100"
-								value={data.config.ticketButtonEmoji}
+								bind:value={ticketButtonEmoji}
 								class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 							/>
 						</label>
@@ -481,12 +506,11 @@
 							<span class="font-medium text-zinc-300">Style</span>
 							<select
 								name="ticket_button_style"
+								bind:value={ticketButtonStyle}
 								class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 							>
 								{#each data.ticketStyles as style (style)}
-									<option value={style} selected={style === data.config.ticketButtonStyle}>
-										{style}
-									</option>
+									<option value={style}>{style}</option>
 								{/each}
 							</select>
 						</label>
@@ -503,36 +527,98 @@
 				</form>
 
 				<div class="mt-8 border-t border-white/10 pt-7">
+					<h3 class="font-semibold">Aperçu du panneau</h3>
+					<p class="mt-2 text-sm text-zinc-500">
+						L’aperçu se met à jour pendant la saisie. Discord ajoutera la date de publication.
+					</p>
+
+					<div class="mt-5 max-w-2xl rounded-lg bg-[#313338] p-4 text-[#dbdee1]">
+						<div class="border-l-4 border-[#5f91c4] bg-[#2b2d31] px-4 py-3">
+							<p class="font-semibold text-white">{ticketPanelTitle || 'Titre du panneau'}</p>
+							<p class="mt-2 text-sm whitespace-pre-wrap">
+								{ticketPanelMessage || 'Message du panneau'}
+							</p>
+							<p class="mt-4 text-xs text-[#949ba4]">{data.guild.name}</p>
+						</div>
+						<button
+							type="button"
+							class={[
+								'mt-3 rounded px-4 py-2 text-sm font-medium',
+								ticketButtonClasses[ticketButtonStyle] || ticketButtonClasses.Primary
+							]}
+						>
+							{ticketButtonEmoji ? `${ticketButtonEmoji} ` : ''}{ticketButtonLabel ||
+								'Bouton du panneau'}
+						</button>
+					</div>
+				</div>
+
+				<div class="mt-8 border-t border-white/10 pt-7">
 					<div class="flex flex-wrap items-center justify-between gap-5">
 						<div>
 							<h3 class="font-semibold">Publication Discord</h3>
 							<p class="mt-2 max-w-2xl text-sm text-zinc-500">
-								Un nouveau panneau sera envoyé. Si un précédent message est mémorisé, il sera
-								ensuite supprimé automatiquement.
+								{#if data.config.ticketPanelMessageId}
+									Un panneau est publié dans
+									<strong class="font-medium text-zinc-300">
+										#{data.channels.find(
+											(channel) => channel.id === data.config.ticketPanelPublishedChannelId
+										)?.name || 'canal inconnu'}
+									</strong>. Sa prochaine publication remplacera ce message.
+								{:else}
+									Aucun panneau publié n’est actuellement mémorisé.
+								{/if}
 							</p>
 						</div>
 
-						<form
-							method="POST"
-							action="?/publishTickets"
-							onsubmit={(event) => {
-								if (!confirm('Publier un nouveau panneau de tickets dans Discord ?')) {
-									event.preventDefault();
-								}
-							}}
-						>
-							<button
-								type="submit"
-								class="rounded-xl border border-violet-400/30 bg-violet-400/10 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
+						<div class="flex flex-wrap gap-3">
+							<form
+								method="POST"
+								action="?/publishTickets"
+								onsubmit={(event) => {
+									const message = data.config.ticketPanelMessageId
+										? 'Remplacer le panneau de tickets actuellement publié ?'
+										: 'Publier le panneau de tickets dans Discord ?';
+									if (!confirm(message)) event.preventDefault();
+								}}
 							>
-								{data.config.ticketPanelMessageId ? 'Remplacer le panneau' : 'Publier le panneau'}
-							</button>
-						</form>
+								<button
+									type="submit"
+									class="rounded-xl border border-violet-400/30 bg-violet-400/10 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
+								>
+									{data.config.ticketPanelMessageId ? 'Remplacer le panneau' : 'Publier le panneau'}
+								</button>
+							</form>
+
+							{#if data.config.ticketPanelMessageId}
+								<form
+									method="POST"
+									action="?/deleteTicketPanel"
+									onsubmit={(event) => {
+										if (!confirm('Supprimer définitivement le panneau publié dans Discord ?')) {
+											event.preventDefault();
+										}
+									}}
+								>
+									<button
+										type="submit"
+										class="rounded-xl border border-red-400/30 bg-red-400/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-400/20"
+									>
+										Supprimer le panneau
+									</button>
+								</form>
+							{/if}
+						</div>
 					</div>
 
-					{#if form?.section === 'publishTickets' && form.message}
+					{#if (form?.section === 'publishTickets' || form?.section === 'deleteTicketPanel') && form.message}
 						<div
-							class="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
+							class={[
+								'mt-5 rounded-xl border px-4 py-3 text-sm',
+								form.success
+									? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+									: 'border-red-400/20 bg-red-400/10 text-red-300'
+							]}
 							role="status"
 						>
 							{form.message}

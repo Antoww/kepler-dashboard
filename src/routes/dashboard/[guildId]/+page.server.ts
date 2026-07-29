@@ -362,9 +362,61 @@ export const actions: Actions = {
 		return {
 			success: true,
 			section: 'publishTickets',
-			message: oldPanelRemoved
-				? 'Nouveau panneau publié. L’ancien panneau a été retiré.'
-				: "Nouveau panneau publié, mais l'ancien message n'a pas pu être supprimé."
+			message:
+				!config.ticket_panel_message_id || !config.ticket_panel_published_channel_id
+					? 'Le panneau de tickets a été publié dans Discord.'
+					: oldPanelRemoved
+						? 'Nouveau panneau publié. L’ancien panneau a été retiré.'
+						: "Nouveau panneau publié, mais l'ancien message n'a pas pu être supprimé."
+		};
+	},
+	deleteTicketPanel: async ({ cookies, params }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		if (!(await getManageableGuilds(session.accessToken)).some((guild) => guild.id === guildId)) {
+			return fail(403, {
+				section: 'deleteTicketPanel',
+				message: "Tu n'as plus la permission de gérer ce serveur."
+			});
+		}
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, {
+				section: 'deleteTicketPanel',
+				message: "Kepler n'est plus présent sur ce serveur."
+			});
+		}
+
+		const config = await getServerConfig(guildId);
+		if (!config?.ticket_panel_message_id || !config.ticket_panel_published_channel_id) {
+			return fail(400, {
+				section: 'deleteTicketPanel',
+				message: 'Aucun panneau publié n’est mémorisé pour ce serveur.'
+			});
+		}
+
+		try {
+			await deleteDiscordMessage(
+				config.ticket_panel_published_channel_id,
+				config.ticket_panel_message_id,
+				botToken
+			);
+			await updatePublishedTicketPanel(guildId, null, null);
+		} catch (cause) {
+			console.error('Unable to delete published ticket panel', cause);
+			return fail(502, {
+				section: 'deleteTicketPanel',
+				message: "Le panneau n'a pas pu être supprimé."
+			});
+		}
+
+		return {
+			success: true,
+			section: 'deleteTicketPanel',
+			message: 'Le panneau de tickets a été supprimé de Discord.'
 		};
 	}
 };

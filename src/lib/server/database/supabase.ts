@@ -105,8 +105,8 @@ export async function updateTicketConfig(
 
 export async function updatePublishedTicketPanel(
 	guildId: string,
-	channelId: string,
-	messageId: string
+	channelId: string | null,
+	messageId: string | null
 ): Promise<void> {
 	const { error } = await getSupabase()
 		.from('server_configs')
