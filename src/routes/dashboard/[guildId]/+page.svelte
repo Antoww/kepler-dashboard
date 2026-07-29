@@ -3,7 +3,9 @@
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 
 	let { data, form } = $props();
-	let activeTab = $state<'overview' | 'general' | 'reports' | 'tickets'>('overview');
+	let activeTab = $state<
+		'overview' | 'general' | 'logs' | 'moderation' | 'birthdays' | 'reports' | 'tickets'
+	>('overview');
 	let ticketPanelTitle = $state('');
 	let ticketPanelMessage = $state('');
 	let ticketButtonLabel = $state('');
@@ -26,6 +28,9 @@
 		)
 			activeTab = 'tickets';
 		else if (form?.section === 'reports') activeTab = 'reports';
+		else if (form?.section === 'moderation') activeTab = 'moderation';
+		else if (form?.section === 'birthdays') activeTab = 'birthdays';
+		else if (form?.section === 'logs') activeTab = 'logs';
 		else if (form?.section === 'general') activeTab = 'general';
 	});
 
@@ -109,7 +114,7 @@
 			class="mt-10 flex gap-1 overflow-x-auto border-b border-white/10"
 			aria-label="Configuration"
 		>
-			{#each [['overview', 'Vue d’ensemble'], ['general', 'Général'], ['reports', 'Signalements'], ['tickets', 'Tickets']] as tab (tab[0])}
+			{#each [['overview', 'Vue d’ensemble'], ['general', 'Général'], ['logs', 'Journaux'], ['moderation', 'Modération'], ['birthdays', 'Anniversaires'], ['reports', 'Signalements'], ['tickets', 'Tickets']] as tab (tab[0])}
 				<button
 					type="button"
 					onclick={() => (activeTab = tab[0] as typeof activeTab)}
@@ -190,13 +195,13 @@
 			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
 				<div>
 					<p class="text-sm font-medium text-violet-300">Réglages généraux</p>
-					<h2 class="mt-2 text-2xl font-semibold">Canaux, rôle et fuseau horaire</h2>
+					<h2 class="mt-2 text-2xl font-semibold">Fuseau horaire du serveur</h2>
 					<p class="mt-2 text-sm text-zinc-500">
-						Les options sont chargées directement depuis Discord et validées avant enregistrement.
+						Kepler utilise ce fuseau pour les annonces et les fonctionnalités planifiées.
 					</p>
 				</div>
 
-				{#if form?.message}
+				{#if form?.section === 'general' && form.message}
 					<div
 						class={[
 							'mt-6 rounded-xl border px-4 py-3 text-sm',
@@ -210,14 +215,65 @@
 					</div>
 				{/if}
 
-				<form method="POST" action="?/general" class="mt-7 grid gap-5 md:grid-cols-2">
+				<form method="POST" action="?/general" class="mt-7 grid max-w-xl gap-5">
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Fuseau horaire</span>
+						<select
+							name="timezone"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							{#each data.timezones as timezone (timezone)}
+								<option value={timezone} selected={timezone === data.config.timezone}
+									>{timezone}</option
+								>
+							{/each}
+						</select>
+					</label>
+
+					<div>
+						<button
+							type="submit"
+							class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+						>
+							Enregistrer le fuseau horaire
+						</button>
+					</div>
+				</form>
+			</section>
+		{/if}
+
+		{#if activeTab === 'logs'}
+			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Module Journaux</p>
+					<h2 class="mt-2 text-2xl font-semibold">Activité du serveur</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						Choisis le canal dans lequel Kepler publiera les événements du serveur.
+					</p>
+				</div>
+
+				{#if form?.section === 'logs' && form.message}
+					<div
+						class={[
+							'mt-6 rounded-xl border px-4 py-3 text-sm',
+							form.success
+								? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+								: 'border-red-400/20 bg-red-400/10 text-red-300'
+						]}
+						role="status"
+					>
+						{form.message}
+					</div>
+				{/if}
+
+				<form method="POST" action="?/logs" class="mt-7 grid max-w-xl gap-5">
 					<label class="grid gap-2 text-sm">
 						<span class="font-medium text-zinc-300">Canal des journaux</span>
 						<select
 							name="log_channel_id"
 							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 						>
-							<option value="">Non configuré</option>
+							<option value="">Non configuré — désactiver</option>
 							{#each data.channels as channel (channel.id)}
 								<option value={channel.id} selected={channel.id === data.config.logChannelId}>
 									#{channel.name}
@@ -225,22 +281,41 @@
 							{/each}
 						</select>
 					</label>
+					<button
+						type="submit"
+						class="w-fit rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400"
+					>
+						Enregistrer les journaux
+					</button>
+				</form>
+			</section>
+		{/if}
 
-					<label class="grid gap-2 text-sm">
-						<span class="font-medium text-zinc-300">Canal des anniversaires</span>
-						<select
-							name="birthday_channel_id"
-							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-						>
-							<option value="">Non configuré</option>
-							{#each data.channels as channel (channel.id)}
-								<option value={channel.id} selected={channel.id === data.config.birthdayChannelId}>
-									#{channel.name}
-								</option>
-							{/each}
-						</select>
-					</label>
+		{#if activeTab === 'moderation'}
+			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Module Modération</p>
+					<h2 class="mt-2 text-2xl font-semibold">Sanctions et notifications</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						Configure le canal de suivi et le rôle appliqué aux membres rendus muets.
+					</p>
+				</div>
 
+				{#if form?.section === 'moderation' && form.message}
+					<div
+						class={[
+							'mt-6 rounded-xl border px-4 py-3 text-sm',
+							form.success
+								? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+								: 'border-red-400/20 bg-red-400/10 text-red-300'
+						]}
+						role="status"
+					>
+						{form.message}
+					</div>
+				{/if}
+
+				<form method="POST" action="?/moderation" class="mt-7 grid gap-5 md:grid-cols-2">
 					<label class="grid gap-2 text-sm">
 						<span class="font-medium text-zinc-300">Canal de modération</span>
 						<select
@@ -258,7 +333,6 @@
 							{/each}
 						</select>
 					</label>
-
 					<label class="grid gap-2 text-sm">
 						<span class="font-medium text-zinc-300">Rôle muet</span>
 						<select
@@ -273,29 +347,61 @@
 							{/each}
 						</select>
 					</label>
+					<button
+						type="submit"
+						class="w-fit rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 md:col-span-2"
+					>
+						Enregistrer la modération
+					</button>
+				</form>
+			</section>
+		{/if}
 
-					<label class="grid gap-2 text-sm md:col-span-2">
-						<span class="font-medium text-zinc-300">Fuseau horaire</span>
+		{#if activeTab === 'birthdays'}
+			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Module Anniversaires</p>
+					<h2 class="mt-2 text-2xl font-semibold">Annonces automatiques</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						Choisis le canal dans lequel Kepler souhaitera les anniversaires.
+					</p>
+				</div>
+
+				{#if form?.section === 'birthdays' && form.message}
+					<div
+						class={[
+							'mt-6 rounded-xl border px-4 py-3 text-sm',
+							form.success
+								? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+								: 'border-red-400/20 bg-red-400/10 text-red-300'
+						]}
+						role="status"
+					>
+						{form.message}
+					</div>
+				{/if}
+
+				<form method="POST" action="?/birthdays" class="mt-7 grid max-w-xl gap-5">
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal des anniversaires</span>
 						<select
-							name="timezone"
+							name="birthday_channel_id"
 							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 						>
-							{#each data.timezones as timezone (timezone)}
-								<option value={timezone} selected={timezone === data.config.timezone}
-									>{timezone}</option
-								>
+							<option value="">Non configuré — désactiver</option>
+							{#each data.channels as channel (channel.id)}
+								<option value={channel.id} selected={channel.id === data.config.birthdayChannelId}>
+									#{channel.name}
+								</option>
 							{/each}
 						</select>
 					</label>
-
-					<div class="md:col-span-2">
-						<button
-							type="submit"
-							class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
-						>
-							Enregistrer les réglages
-						</button>
-					</div>
+					<button
+						type="submit"
+						class="w-fit rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400"
+					>
+						Enregistrer les anniversaires
+					</button>
 				</form>
 			</section>
 		{/if}

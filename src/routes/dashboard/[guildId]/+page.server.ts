@@ -129,45 +129,155 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-		const readValue = (name: string) => String(formData.get(name) || '');
-		const logChannelId = readValue('log_channel_id');
-		const birthdayChannelId = readValue('birthday_channel_id');
-		const moderationChannelId = readValue('moderation_channel_id');
-		const muteRoleId = readValue('mute_role_id');
-		const timezone = readValue('timezone');
+		const timezone = String(formData.get('timezone') || '');
+		if (!TIMEZONES.includes(timezone))
+			return fail(400, { section: 'general', message: 'Le fuseau horaire est invalide.' });
+
+		try {
+			await updateGeneralConfig(guildId, { timezone });
+		} catch (cause) {
+			console.error('Unable to update general server config', cause);
+			return fail(502, {
+				section: 'general',
+				message: "La configuration n'a pas pu être enregistrée."
+			});
+		}
+
+		return { success: true, section: 'general', message: 'Configuration générale enregistrée.' };
+	},
+	logs: async ({ cookies, params, request }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		if (!(await getManageableGuilds(session.accessToken)).some((guild) => guild.id === guildId)) {
+			return fail(403, { section: 'logs', message: 'Tu ne peux plus gérer ce serveur.' });
+		}
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, { section: 'logs', message: "Kepler n'est plus présent sur ce serveur." });
+		}
+
+		const formData = await request.formData();
+		const channelId = String(formData.get('log_channel_id') || '');
+		if (
+			channelId &&
+			!(await getGuildChannels(guildId, botToken)).some(({ id }) => id === channelId)
+		) {
+			return fail(400, { section: 'logs', message: 'Le canal sélectionné est invalide.' });
+		}
+
+		try {
+			await updateGeneralConfig(guildId, { log_channel_id: channelId || null });
+		} catch (cause) {
+			console.error('Unable to update log config', cause);
+			return fail(502, {
+				section: 'logs',
+				message: "La configuration des journaux n'a pas pu être enregistrée."
+			});
+		}
+
+		return {
+			success: true,
+			section: 'logs',
+			message: channelId ? 'Canal des journaux enregistré.' : 'Journaux désactivés.'
+		};
+	},
+	birthdays: async ({ cookies, params, request }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		if (!(await getManageableGuilds(session.accessToken)).some((guild) => guild.id === guildId)) {
+			return fail(403, { section: 'birthdays', message: 'Tu ne peux plus gérer ce serveur.' });
+		}
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, {
+				section: 'birthdays',
+				message: "Kepler n'est plus présent sur ce serveur."
+			});
+		}
+
+		const formData = await request.formData();
+		const channelId = String(formData.get('birthday_channel_id') || '');
+		if (
+			channelId &&
+			!(await getGuildChannels(guildId, botToken)).some(({ id }) => id === channelId)
+		) {
+			return fail(400, { section: 'birthdays', message: 'Le canal sélectionné est invalide.' });
+		}
+
+		try {
+			await updateGeneralConfig(guildId, { birthday_channel_id: channelId || null });
+		} catch (cause) {
+			console.error('Unable to update birthday config', cause);
+			return fail(502, {
+				section: 'birthdays',
+				message: "La configuration des anniversaires n'a pas pu être enregistrée."
+			});
+		}
+
+		return {
+			success: true,
+			section: 'birthdays',
+			message: channelId ? 'Canal des anniversaires enregistré.' : 'Annonces désactivées.'
+		};
+	},
+	moderation: async ({ cookies, params, request }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		if (!(await getManageableGuilds(session.accessToken)).some((guild) => guild.id === guildId)) {
+			return fail(403, { section: 'moderation', message: 'Tu ne peux plus gérer ce serveur.' });
+		}
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, {
+				section: 'moderation',
+				message: "Kepler n'est plus présent sur ce serveur."
+			});
+		}
+
+		const formData = await request.formData();
+		const channelId = String(formData.get('moderation_channel_id') || '');
+		const roleId = String(formData.get('mute_role_id') || '');
 		const [channels, roles] = await Promise.all([
 			getGuildChannels(guildId, botToken),
 			getGuildRoles(guildId, botToken)
 		]);
-		const channelIds = new Set(channels.map((channel) => channel.id));
-		const roleIds = new Set(roles.map((role) => role.id));
-		const validOptionalId = (value: string, allowedIds: Set<string>) =>
-			value === '' || allowedIds.has(value);
-
 		if (
-			!validOptionalId(logChannelId, channelIds) ||
-			!validOptionalId(birthdayChannelId, channelIds) ||
-			!validOptionalId(moderationChannelId, channelIds) ||
-			!validOptionalId(muteRoleId, roleIds) ||
-			!TIMEZONES.includes(timezone)
+			(channelId && !channels.some(({ id }) => id === channelId)) ||
+			(roleId && !roles.some(({ id }) => id === roleId))
 		) {
-			return fail(400, { message: 'Une des valeurs sélectionnées est invalide.' });
+			return fail(400, {
+				section: 'moderation',
+				message: 'Le canal ou le rôle sélectionné est invalide.'
+			});
 		}
 
 		try {
 			await updateGeneralConfig(guildId, {
-				log_channel_id: logChannelId || null,
-				birthday_channel_id: birthdayChannelId || null,
-				moderation_channel_id: moderationChannelId || null,
-				mute_role_id: muteRoleId || null,
-				timezone
+				moderation_channel_id: channelId || null,
+				mute_role_id: roleId || null
 			});
 		} catch (cause) {
-			console.error('Unable to update general server config', cause);
-			return fail(502, { message: "La configuration n'a pas pu être enregistrée." });
+			console.error('Unable to update moderation config', cause);
+			return fail(502, {
+				section: 'moderation',
+				message: "La configuration de modération n'a pas pu être enregistrée."
+			});
 		}
 
-		return { success: true, section: 'general', message: 'Configuration générale enregistrée.' };
+		return {
+			success: true,
+			section: 'moderation',
+			message: 'Configuration de modération enregistrée.'
+		};
 	},
 	reports: async ({ cookies, params, request }) => {
 		const session = await getSession(cookies);
