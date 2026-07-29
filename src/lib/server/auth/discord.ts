@@ -52,6 +52,14 @@ export interface DiscordRole {
 	managed: boolean;
 }
 
+export interface DiscordGuildStats {
+	memberCount: number;
+	onlineCount: number;
+	boostCount: number;
+	boostLevel: number;
+	preferredLocale: string;
+}
+
 function basicAuthorization(config: AuthConfig): string {
 	return `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`;
 }
@@ -178,6 +186,30 @@ export async function getBotApplicationId(botToken: string): Promise<string> {
 	const application = await parseDiscordResponse<DiscordApplication>(response);
 
 	return application.id;
+}
+
+export async function getGuildStats(guildId: string, botToken: string): Promise<DiscordGuildStats> {
+	const response = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, {
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'User-Agent': USER_AGENT
+		}
+	});
+	const guild = await parseDiscordResponse<{
+		approximate_member_count?: number;
+		approximate_presence_count?: number;
+		premium_subscription_count?: number;
+		premium_tier?: number;
+		preferred_locale?: string;
+	}>(response);
+
+	return {
+		memberCount: guild.approximate_member_count ?? 0,
+		onlineCount: guild.approximate_presence_count ?? 0,
+		boostCount: guild.premium_subscription_count ?? 0,
+		boostLevel: guild.premium_tier ?? 0,
+		preferredLocale: guild.preferred_locale ?? 'fr'
+	};
 }
 
 export async function getGuildChannels(

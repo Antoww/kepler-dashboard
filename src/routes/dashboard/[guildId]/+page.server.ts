@@ -5,6 +5,7 @@ import {
 	getGuildCategories,
 	getGuildChannels,
 	getGuildRoles,
+	getGuildStats,
 	getManageableGuilds,
 	publishTicketPanel
 } from '$lib/server/auth/discord';
@@ -45,10 +46,11 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	const botGuildIds = await getBotGuildIds(botToken);
 	if (!botGuildIds.has(guild.id)) error(404, "Kepler n'est pas installé sur ce serveur.");
 
-	const [channels, categories, roles] = await Promise.all([
+	const [channels, categories, roles, guildStats] = await Promise.all([
 		getGuildChannels(guild.id, botToken),
 		getGuildCategories(guild.id, botToken),
-		getGuildRoles(guild.id, botToken)
+		getGuildRoles(guild.id, botToken),
+		getGuildStats(guild.id, botToken)
 	]);
 
 	let serverConfig;
@@ -106,6 +108,12 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 		channels: channels.map(({ id, name }) => ({ id, name })),
 		categories: categories.map(({ id, name }) => ({ id, name })),
 		roles: roles.map(({ id, name }) => ({ id, name })),
+		stats: {
+			...guildStats,
+			textChannelCount: channels.length,
+			categoryCount: categories.length,
+			configurableRoleCount: roles.length
+		},
 		timezones: TIMEZONES,
 		ticketStyles: TICKET_STYLES
 	};

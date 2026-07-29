@@ -3,16 +3,23 @@
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Cake from '@lucide/svelte/icons/cake';
+	import ChartNoAxesColumnIncreasing from '@lucide/svelte/icons/chart-no-axes-column-increasing';
 	import Flag from '@lucide/svelte/icons/flag';
+	import Gem from '@lucide/svelte/icons/gem';
+	import Hash from '@lucide/svelte/icons/hash';
+	import Languages from '@lucide/svelte/icons/languages';
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import Radio from '@lucide/svelte/icons/radio';
 	import ScrollText from '@lucide/svelte/icons/scroll-text';
 	import Settings from '@lucide/svelte/icons/settings';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import Tags from '@lucide/svelte/icons/tags';
 	import Ticket from '@lucide/svelte/icons/ticket';
+	import Users from '@lucide/svelte/icons/users';
 
 	let { data, form } = $props();
 	let activeTab = $state<
-		'overview' | 'general' | 'logs' | 'moderation' | 'birthdays' | 'reports' | 'tickets'
+		'overview' | 'stats' | 'general' | 'logs' | 'moderation' | 'birthdays' | 'reports' | 'tickets'
 	>('overview');
 	let ticketPanelTitle = $state('');
 	let ticketPanelMessage = $state('');
@@ -50,6 +57,7 @@
 	};
 	const tabs = [
 		['overview', 'Vue d’ensemble', LayoutDashboard],
+		['stats', 'Statistiques', ChartNoAxesColumnIncreasing],
 		['general', 'Général', Settings],
 		['logs', 'Journaux', ScrollText],
 		['moderation', 'Modération', ShieldCheck],
@@ -57,6 +65,45 @@
 		['reports', 'Signalements', Flag],
 		['tickets', 'Tickets', Ticket]
 	] as const;
+	const numberFormat = new Intl.NumberFormat('fr-FR');
+	const serverStats = $derived([
+		{
+			label: 'Membres',
+			value: numberFormat.format(data.stats.memberCount),
+			detail: 'Membres du serveur',
+			icon: Users
+		},
+		{
+			label: 'En ligne',
+			value: numberFormat.format(data.stats.onlineCount),
+			detail: 'Estimation Discord',
+			icon: Radio
+		},
+		{
+			label: 'Salons textuels',
+			value: numberFormat.format(data.stats.textChannelCount),
+			detail: `${data.stats.categoryCount} catégorie${data.stats.categoryCount > 1 ? 's' : ''}`,
+			icon: Hash
+		},
+		{
+			label: 'Rôles',
+			value: numberFormat.format(data.stats.configurableRoleCount),
+			detail: 'Rôles configurables',
+			icon: Tags
+		},
+		{
+			label: 'Boosts',
+			value: numberFormat.format(data.stats.boostCount),
+			detail: `Niveau ${data.stats.boostLevel}`,
+			icon: Gem
+		},
+		{
+			label: 'Langue Discord',
+			value: data.stats.preferredLocale,
+			detail: 'Langue préférée du serveur',
+			icon: Languages
+		}
+	]);
 
 	const modules = $derived([
 		{
@@ -263,6 +310,47 @@
 										</div>
 									</article>
 								{/each}
+							</div>
+						</section>
+					{/if}
+
+					{#if activeTab === 'stats'}
+						<section class="mt-10">
+							<div>
+								<p class="text-sm font-medium text-violet-300">Statistiques Discord</p>
+								<h2 class="mt-2 text-2xl font-semibold">Aperçu du serveur</h2>
+								<p class="mt-2 text-sm text-zinc-500">
+									Données actuelles fournies par Discord lors du chargement de la page.
+								</p>
+							</div>
+
+							<div class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+								{#each serverStats as stat (stat.label)}
+									{@const Icon = stat.icon}
+									<article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+										<div class="flex items-start justify-between gap-4">
+											<div>
+												<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">
+													{stat.label}
+												</p>
+												<p class="mt-3 text-3xl font-semibold tracking-tight">{stat.value}</p>
+												<p class="mt-2 text-sm text-zinc-600">{stat.detail}</p>
+											</div>
+											<div
+												class="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-400/10 text-violet-300"
+											>
+												<Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+											</div>
+										</div>
+									</article>
+								{/each}
+							</div>
+
+							<div
+								class="mt-5 rounded-2xl border border-white/[0.07] bg-black/10 px-5 py-4 text-sm text-zinc-500"
+							>
+								Le nombre de membres en ligne est une estimation communiquée par Discord. Les rôles
+								gérés par des intégrations ne sont pas inclus dans le total configurable.
 							</div>
 						</section>
 					{/if}
