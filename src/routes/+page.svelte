@@ -7,33 +7,39 @@
 	const features = [
 		{
 			icon: '◈',
-			name: 'Modération',
-			description: 'Centralisez les sanctions, les notifications et le rôle muet de votre serveur.'
+			name: 'Une modération qui garde le fil',
+			description:
+				'Avertissements, exclusions, bannissements et mutes sont regroupés dans un historique de sanctions numérotées.'
 		},
 		{
 			icon: '⌁',
-			name: 'Journaux',
-			description: 'Gardez une trace claire des événements importants dans le canal de votre choix.'
+			name: 'Des journaux vraiment utiles',
+			description:
+				'Les actions importantes arrivent dans les bons salons pour que votre équipe sache ce qui s’est passé.'
 		},
 		{
 			icon: '◎',
-			name: 'Tickets',
-			description: 'Publiez un panneau personnalisable et organisez simplement le support privé.'
+			name: 'Un support bien rangé',
+			description:
+				'Publiez votre panneau de tickets, choisissez l’équipe responsable et conservez les échanges dans des salons privés.'
 		},
 		{
 			icon: '✦',
-			name: 'Anniversaires',
-			description: 'Automatisez les annonces pour célébrer chaque membre de votre communauté.'
+			name: 'Une communauté plus vivante',
+			description:
+				'Anniversaires, rappels, annonces et commandes interactives donnent de bonnes raisons de revenir discuter.'
 		},
 		{
 			icon: '⚑',
-			name: 'Signalements',
-			description: 'Transmettez les signalements à la bonne équipe, dans un espace dédié.'
+			name: 'Les signalements au bon endroit',
+			description:
+				'Les membres peuvent alerter votre équipe sans exposer la situation dans les salons publics.'
 		},
 		{
 			icon: '⌖',
-			name: 'Multi-serveurs',
-			description: 'Retrouvez tous les serveurs que vous gérez depuis un seul compte Discord.'
+			name: 'Des outils pour tous les jours',
+			description:
+				'Informations sur les membres, rôles et salons, génération de mots de passe, jeux et autres commandes pratiques.'
 		}
 	];
 </script>
@@ -42,7 +48,7 @@
 	<title>Kepler — Le centre de contrôle de votre serveur Discord</title>
 	<meta
 		name="description"
-		content="Configurez la modération, les tickets, les journaux et les automatisations de Kepler depuis un dashboard Discord simple et sécurisé."
+		content="Kepler est un bot Discord français qui réunit modération, tickets, outils pratiques et animations pour aider les équipes à faire vivre leur communauté."
 	/>
 </svelte:head>
 
@@ -84,20 +90,21 @@
 						class="mb-7 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/[0.08] px-3 py-1.5 text-sm font-medium text-violet-300"
 					>
 						<span class="size-1.5 rounded-full bg-violet-400 shadow-[0_0_12px_#a78bfa]"></span>
-						Votre communauté, sous contrôle
+						Un bot Discord français, pensé avec sa communauté
 					</div>
 
 					<h1 class="max-w-3xl text-5xl leading-[1.02] font-bold tracking-[-0.04em] sm:text-7xl">
-						La mission de votre serveur
+						Kepler aide votre équipe à
 						<span
 							class="bg-gradient-to-r from-violet-400 to-indigo-300 bg-clip-text text-transparent"
-							>commence ici.</span
+							>faire vivre le serveur.</span
 						>
 					</h1>
 
 					<p class="mt-7 max-w-xl text-lg leading-8 text-zinc-400">
-						Kepler réunit modération, tickets et automatisations dans un dashboard pensé pour gérer
-						votre serveur Discord sans friction.
+						Modérez proprement, répondez aux membres, automatisez les tâches répétitives et gardez
+						une touche de fun. Kepler rassemble les outils utiles au quotidien sans transformer
+						votre serveur en usine à gaz.
 					</p>
 
 					<div class="mt-10 flex flex-wrap items-center gap-4">
@@ -116,16 +123,16 @@
 							href="#fonctionnalites"
 							class="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-3.5 font-medium text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
 						>
-							Découvrir Kepler
+							Voir ce que fait le bot
 						</a>
 					</div>
 
 					<div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-500">
 						<span class="flex items-center gap-2"
-							><span class="text-emerald-400">✓</span> OAuth2 sécurisé</span
+							><span class="text-emerald-400">✓</span> Développé activement</span
 						>
 						<span class="flex items-center gap-2"
-							><span class="text-emerald-400">✓</span> Configuration instantanée</span
+							><span class="text-emerald-400">✓</span> Configuration sans commandes</span
 						>
 					</div>
 				</div>
@@ -220,13 +227,13 @@
 			<section id="fonctionnalites" class="border-y border-white/[0.06] bg-white/[0.018]">
 				<div class="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
 					<div class="max-w-2xl">
-						<p class="text-sm font-semibold text-violet-400">Tout ce qu’il faut, au même endroit</p>
+						<p class="text-sm font-semibold text-violet-400">Un seul bot, plusieurs rôles</p>
 						<h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">
-							Moins de commandes.<br />Plus de contrôle.
+							Sérieux quand il le faut.<br />Sympa le reste du temps.
 						</h2>
 						<p class="mt-5 text-lg leading-8 text-zinc-400">
-							Chaque module se configure visuellement et utilise les canaux et rôles réels de votre
-							serveur.
+							Kepler accompagne aussi bien l’équipe qui administre le serveur que les membres qui le
+							font vivre.
 						</p>
 					</div>
 
@@ -250,9 +257,9 @@
 
 			<section id="fonctionnement" class="mx-auto max-w-7xl px-6 py-24 lg:px-8 lg:py-32">
 				<div class="text-center">
-					<p class="text-sm font-semibold text-violet-400">Simple dès le départ</p>
+					<p class="text-sm font-semibold text-violet-400">Le dashboard complète le bot</p>
 					<h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">
-						Opérationnel en trois étapes
+						Vous choisissez. Kepler s’occupe du reste.
 					</h2>
 				</div>
 
@@ -260,7 +267,7 @@
 					<div
 						class="absolute top-8 right-[16%] left-[16%] hidden border-t border-dashed border-violet-400/20 md:block"
 					></div>
-					{#each [['01', 'Connectez Discord', 'Authentifiez-vous avec votre compte Discord, sans créer un nouveau mot de passe.'], ['02', 'Choisissez un serveur', 'Kepler affiche uniquement les serveurs que vous avez la permission de gérer.'], ['03', 'Configurez Kepler', 'Sélectionnez vos canaux, vos rôles et publiez vos panneaux en quelques clics.']] as step (step[0])}
+					{#each [['01', 'Retrouvez vos serveurs', 'Connectez Discord et choisissez simplement le serveur sur lequel Kepler est installé.'], ['02', 'Adaptez-le à votre équipe', 'Indiquez les salons et les rôles que le bot doit utiliser pour chaque fonctionnalité.'], ['03', 'Retournez sur Discord', 'Kepler prend en compte vos choix : votre équipe continue à travailler là où elle échange déjà.']] as step (step[0])}
 						<article class="relative text-center">
 							<div
 								class="mx-auto grid size-16 place-items-center rounded-2xl border border-violet-400/20 bg-[#101016] font-mono text-sm text-violet-300 shadow-xl shadow-black/30"
@@ -282,16 +289,17 @@
 						class="pointer-events-none absolute -top-32 -left-20 size-80 rounded-full bg-violet-600/15 blur-3xl"
 					></div>
 					<div class="relative">
-						<p class="text-sm font-semibold text-violet-300">Conçu pour rester privé</p>
+						<p class="text-sm font-semibold text-violet-300">La confiance n’est pas une option</p>
 						<h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-							Vos accès restent entre de bonnes mains.
+							Kepler ne vous demande pas les clés du serveur.
 						</h2>
 						<p class="mt-5 leading-7 text-zinc-400">
-							Le dashboard vérifie vos permissions Discord à chaque opération sensible.
+							Vous vous connectez avec Discord et le dashboard respecte les permissions que vous
+							avez déjà. Seules les personnes autorisées peuvent configurer le bot.
 						</p>
 					</div>
 					<div class="relative mt-10 grid gap-4 sm:grid-cols-2 lg:mt-0">
-						{#each [['OAuth2 Discord', 'Connexion officielle sans mot de passe stocké.'], ['Accès contrôlé', 'Seuls les serveurs que vous gérez sont accessibles.'], ['Secrets serveur', 'Les clés Discord et Supabase ne quittent jamais le serveur.'], ['Données partagées', 'La configuration est synchronisée avec Kepler via Supabase.']] as item (item[0])}
+						{#each [['Votre mot de passe reste chez Discord', 'La connexion passe par l’autorisation officielle de Discord.'], ['Vos permissions sont respectées', 'Un serveur n’apparaît que si votre compte peut réellement le gérer.'], ['Chaque choix est vérifié', 'Kepler contrôle les salons et les rôles avant de modifier sa configuration.'], ['Un projet qui évolue', 'Le bot et son dashboard avancent ensemble grâce aux retours de la communauté.']] as item (item[0])}
 							<div class="rounded-2xl border border-white/[0.08] bg-black/15 p-5">
 								<span class="text-emerald-400">✓</span>
 								<p class="mt-3 text-sm font-semibold">{item[0]}</p>
@@ -305,10 +313,10 @@
 			<section class="border-t border-white/[0.06]">
 				<div class="mx-auto max-w-3xl px-6 py-24 text-center lg:py-28">
 					<h2 class="text-3xl font-bold tracking-tight sm:text-5xl">
-						Prêt à mettre votre serveur en orbite ?
+						Envie d’essayer Kepler sur votre serveur ?
 					</h2>
 					<p class="mx-auto mt-5 max-w-xl text-lg text-zinc-400">
-						Connectez votre compte Discord et configurez Kepler depuis un espace unique.
+						Connectez Discord pour retrouver vos serveurs et découvrir les modules déjà disponibles.
 					</p>
 					<a
 						href={data.user ? resolve('/dashboard') : resolve('/auth/discord')}
@@ -329,7 +337,7 @@
 					<img src={`${base}/favicon.svg`} alt="" class="size-6 rounded-lg" />
 					<span class="font-medium text-zinc-400">Kepler</span>
 				</div>
-				<p>Dashboard officiel de Kepler pour Discord.</p>
+				<p>Un bot français développé pour les communautés Discord.</p>
 			</div>
 		</footer>
 	</div>
