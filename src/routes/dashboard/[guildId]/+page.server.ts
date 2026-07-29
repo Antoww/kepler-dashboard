@@ -13,6 +13,7 @@ import {
 	getServerConfig,
 	updateGeneralConfig,
 	updatePublishedTicketPanel,
+	updateReportConfig,
 	updateTicketConfig
 } from '$lib/server/database/supabase';
 import { error, fail, redirect } from '@sveltejs/kit';
@@ -73,7 +74,7 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 			birthdaysConfigured: Boolean(serverConfig?.birthday_channel_id),
 			moderationConfigured: Boolean(serverConfig?.moderation_channel_id),
 			muteConfigured: Boolean(serverConfig?.mute_role_id),
-			reportsConfigured: Boolean(serverConfig?.report_channel_id && serverConfig?.report_role_id),
+			reportsConfigured: Boolean(serverConfig?.report_channel_id),
 			ticketsConfigured: Boolean(
 				serverConfig?.ticket_panel_channel_id &&
 				serverConfig?.ticket_category_id &&
@@ -86,6 +87,8 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 			birthdayChannelId: serverConfig?.birthday_channel_id || '',
 			moderationChannelId: serverConfig?.moderation_channel_id || '',
 			muteRoleId: serverConfig?.mute_role_id || '',
+			reportChannelId: serverConfig?.report_channel_id || '',
+			reportRoleId: serverConfig?.report_role_id || '',
 			ticketPanelChannelId: serverConfig?.ticket_panel_channel_id || '',
 			ticketCategoryId: serverConfig?.ticket_category_id || '',
 			ticketLogChannelId: serverConfig?.ticket_log_channel_id || '',
@@ -165,6 +168,56 @@ export const actions: Actions = {
 		}
 
 		return { success: true, section: 'general', message: 'Configuration générale enregistrée.' };
+	},
+	reports: async ({ cookies, params, request }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		if (!(await getManageableGuilds(session.accessToken)).some((guild) => guild.id === guildId)) {
+			return fail(403, { message: "Tu n'as plus la permission de gérer ce serveur." });
+		}
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, { message: "Kepler n'est plus présent sur ce serveur." });
+		}
+
+		const formData = await request.formData();
+		const reportChannelId = String(formData.get('report_channel_id') || '');
+		const reportRoleId = String(formData.get('report_role_id') || '');
+		const [channels, roles] = await Promise.all([
+			getGuildChannels(guildId, botToken),
+			getGuildRoles(guildId, botToken)
+		]);
+
+		if (
+			(reportChannelId && !channels.some((channel) => channel.id === reportChannelId)) ||
+			(reportRoleId && !roles.some((role) => role.id === reportRoleId))
+		) {
+			return fail(400, { message: 'Le canal ou le rôle sélectionné est invalide.' });
+		}
+
+		try {
+			await updateReportConfig(
+				guildId,
+				reportChannelId || null,
+				reportChannelId ? reportRoleId || null : null
+			);
+		} catch (cause) {
+			console.error('Unable to update report config', cause);
+			return fail(502, {
+				message: "La configuration des signalements n'a pas pu être enregistrée."
+			});
+		}
+
+		return {
+			success: true,
+			section: 'reports',
+			message: reportChannelId
+				? 'Configuration des signalements enregistrée.'
+				: 'Module Signalements désactivé.'
+		};
 	},
 	tickets: async ({ cookies, params, request }) => {
 		const session = await getSession(cookies);

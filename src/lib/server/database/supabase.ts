@@ -119,3 +119,21 @@ export async function updatePublishedTicketPanel(
 
 	if (error) throw error;
 }
+
+export async function updateReportConfig(
+	guildId: string,
+	reportChannelId: string | null,
+	reportRoleId: string | null
+): Promise<void> {
+	const { error } = await getSupabase().from('server_configs').upsert(
+		{
+			guild_id: guildId,
+			report_channel_id: reportChannelId,
+			report_role_id: reportRoleId,
+			updated_at: new Date().toISOString()
+		},
+		{ onConflict: 'guild_id' }
+	);
+
+	if (error) throw error;
+}

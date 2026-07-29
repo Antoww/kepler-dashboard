@@ -3,10 +3,11 @@
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 
 	let { data, form } = $props();
-	let activeTab = $state<'overview' | 'general' | 'tickets'>('overview');
+	let activeTab = $state<'overview' | 'general' | 'reports' | 'tickets'>('overview');
 
 	$effect(() => {
 		if (form?.section === 'tickets' || form?.section === 'publishTickets') activeTab = 'tickets';
+		else if (form?.section === 'reports') activeTab = 'reports';
 		else if (form?.section === 'general') activeTab = 'general';
 	});
 
@@ -83,7 +84,7 @@
 			class="mt-10 flex gap-1 overflow-x-auto border-b border-white/10"
 			aria-label="Configuration"
 		>
-			{#each [['overview', 'Vue d’ensemble'], ['general', 'Général'], ['tickets', 'Tickets']] as tab (tab[0])}
+			{#each [['overview', 'Vue d’ensemble'], ['general', 'Général'], ['reports', 'Signalements'], ['tickets', 'Tickets']] as tab (tab[0])}
 				<button
 					type="button"
 					onclick={() => (activeTab = tab[0] as typeof activeTab)}
@@ -268,6 +269,77 @@
 							class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
 						>
 							Enregistrer les réglages
+						</button>
+					</div>
+				</form>
+			</section>
+		{/if}
+
+		{#if activeTab === 'reports'}
+			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Module Signalements</p>
+					<h2 class="mt-2 text-2xl font-semibold">Traitement des signalements</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						Choisis le canal qui recevra les signalements et, si besoin, le rôle à notifier.
+					</p>
+				</div>
+
+				{#if form?.section === 'reports' && form.message}
+					<div
+						class={[
+							'mt-6 rounded-xl border px-4 py-3 text-sm',
+							form.success
+								? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+								: 'border-red-400/20 bg-red-400/10 text-red-300'
+						]}
+						role="status"
+					>
+						{form.message}
+					</div>
+				{/if}
+
+				<form method="POST" action="?/reports" class="mt-7 grid gap-5 md:grid-cols-2">
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal des signalements</span>
+						<select
+							name="report_channel_id"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="">Non configuré — désactiver le module</option>
+							{#each data.channels as channel (channel.id)}
+								<option value={channel.id} selected={channel.id === data.config.reportChannelId}>
+									#{channel.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Rôle à notifier (facultatif)</span>
+						<select
+							name="report_role_id"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="">Aucun rôle</option>
+							{#each data.roles as role (role.id)}
+								<option value={role.id} selected={role.id === data.config.reportRoleId}>
+									@{role.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<p class="text-sm leading-6 text-zinc-500 md:col-span-2">
+						Sans rôle sélectionné, Kepler enverra seulement le signalement dans le canal choisi.
+					</p>
+
+					<div class="md:col-span-2">
+						<button
+							type="submit"
+							class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+						>
+							Enregistrer les signalements
 						</button>
 					</div>
 				</form>
