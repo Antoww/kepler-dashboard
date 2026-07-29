@@ -22,7 +22,8 @@ export const GET: RequestHandler = async ({ cookies, params }) => {
 		guild_id: guildId,
 		disable_guild_select: 'true',
 		integration_type: '0',
-		scope: 'bot applications.commands'
+		scope: 'bot applications.commands',
+		permissions: '8'
 	}).toString();
 
 	redirect(302, authorizationUrl.toString());

@@ -1,9 +1,16 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "kepler-dashboard",
+	"workers_dev": true,
 	"compatibility_date": "2026-07-28",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": ".svelte-kit/cloudflare/_worker.js",
+	"routes": [
+		{
+			"pattern": "dashboard.kepler-bot.net",
+			"custom_domain": true
+		}
+	],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
