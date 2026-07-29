@@ -1,3 +1,7 @@
+<script lang="ts">
+	import { resolve } from '$app/paths';
+</script>
+
 <svelte:head>
 	<title>Kepler — Pilotez votre serveur Discord</title>
 	<meta
@@ -12,7 +16,7 @@
 	></div>
 
 	<header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
-		<a href="/" class="flex items-center gap-3" aria-label="Accueil Kepler">
+		<a href={resolve('/')} class="flex items-center gap-3" aria-label="Accueil Kepler">
 			<span
 				class="grid size-10 place-items-center rounded-xl bg-violet-500 text-lg font-black shadow-lg shadow-violet-500/20"
 				>K</span
@@ -25,7 +29,9 @@
 		</span>
 	</header>
 
-	<main class="mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-28">
+	<main
+		class="mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-28"
+	>
 		<section class="flex flex-col justify-center">
 			<div
 				class="mb-6 w-fit rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1 text-sm font-medium text-violet-300"
@@ -38,20 +44,19 @@
 			</h1>
 
 			<p class="mt-6 max-w-xl text-lg leading-8 text-zinc-400">
-				Configurez la modération, les journaux, les anniversaires et les tickets de Kepler
-				depuis une interface claire.
+				Configurez la modération, les journaux, les anniversaires et les tickets de Kepler depuis
+				une interface claire.
 			</p>
 
 			<div class="mt-9 flex flex-wrap items-center gap-4">
-				<button
-					type="button"
-					disabled
-					class="inline-flex cursor-not-allowed items-center gap-3 rounded-xl bg-violet-500 px-5 py-3 font-semibold text-white opacity-70 shadow-xl shadow-violet-950/40"
+				<a
+					href={resolve('/auth/discord')}
+					class="inline-flex items-center gap-3 rounded-xl bg-violet-500 px-5 py-3 font-semibold text-white shadow-xl shadow-violet-950/40 transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
 				>
 					<span class="grid size-6 place-items-center rounded-md bg-white/15 text-xs">D</span>
 					Connexion avec Discord
-				</button>
-				<span class="text-sm text-zinc-500">Disponible à la prochaine étape</span>
+				</a>
+				<span class="text-sm text-zinc-500">Accès sécurisé via OAuth2</span>
 			</div>
 		</section>
 
@@ -72,14 +77,11 @@
 				</div>
 
 				<div class="grid gap-3 sm:grid-cols-2">
-					{#each [
-						['Modération', 'Active', 'M'],
-						['Journaux', '#logs', 'J'],
-						['Anniversaires', '#général', 'A'],
-						['Tickets', 'Configurés', 'T']
-					] as feature}
+					{#each [['Modération', 'Active', 'M'], ['Journaux', '#logs', 'J'], ['Anniversaires', '#général', 'A'], ['Tickets', 'Configurés', 'T']] as feature (feature[0])}
 						<div class="rounded-xl border border-white/5 bg-white/[0.035] p-4">
-							<div class="mb-6 grid size-9 place-items-center rounded-lg bg-violet-400/10 text-sm text-violet-300">
+							<div
+								class="mb-6 grid size-9 place-items-center rounded-lg bg-violet-400/10 text-sm text-violet-300"
+							>
 								{feature[2]}
 							</div>
 							<p class="text-sm font-medium">{feature[0]}</p>
