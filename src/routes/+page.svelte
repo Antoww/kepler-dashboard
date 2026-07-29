@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
+
+	let { data } = $props();
 </script>
 
 <svelte:head>
@@ -24,9 +27,7 @@
 			<span class="text-lg font-semibold tracking-tight">Kepler</span>
 		</a>
 
-		<span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-400">
-			Dashboard en préparation
-		</span>
+		<ProfileMenu user={data.user} />
 	</header>
 
 	<main

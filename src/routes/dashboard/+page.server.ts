@@ -14,13 +14,19 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	]);
 	return {
 		user: session.user,
-		guilds: manageableGuilds.map((guild) => ({
-			id: guild.id,
-			name: guild.name,
-			iconUrl: guild.icon
-				? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp?size=128`
-				: null,
-			botInstalled: botGuildIds.has(guild.id)
-		}))
+		guilds: manageableGuilds
+			.map((guild) => ({
+				id: guild.id,
+				name: guild.name,
+				iconUrl: guild.icon
+					? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${guild.icon.startsWith('a_') ? 'gif' : 'webp'}?size=128`
+					: null,
+				botInstalled: botGuildIds.has(guild.id)
+			}))
+			.sort(
+				(first, second) =>
+					Number(second.botInstalled) - Number(first.botInstalled) ||
+					first.name.localeCompare(second.name)
+			)
 	};
 };

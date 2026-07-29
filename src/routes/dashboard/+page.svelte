@@ -1,13 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 
 	let { data } = $props();
-
-	const avatarUrl = $derived(
-		data.user.avatar
-			? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.webp?size=128`
-			: null
-	);
 
 	function initial(name: string): string {
 		return name.slice(0, 1).toUpperCase();
@@ -27,22 +22,15 @@
 				<span class="font-semibold">Kepler</span>
 			</a>
 
-			<form method="POST" action="/auth/logout">
-				<button
-					type="submit"
-					class="rounded-lg border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:border-white/20 hover:bg-white/5 hover:text-white"
-				>
-					Se déconnecter
-				</button>
-			</form>
+			<ProfileMenu user={data.user} />
 		</div>
 	</header>
 
 	<main class="mx-auto max-w-6xl px-6 py-12 lg:px-8">
 		<div class="flex items-center gap-4">
-			{#if avatarUrl}
+			{#if data.user.avatar}
 				<img
-					src={avatarUrl}
+					src={`https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.${data.user.avatar.startsWith('a_') ? 'gif' : 'webp'}?size=128`}
 					alt=""
 					class="size-14 rounded-2xl bg-zinc-900 object-cover"
 					referrerpolicy="no-referrer"

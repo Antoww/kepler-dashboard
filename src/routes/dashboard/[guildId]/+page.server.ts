@@ -63,9 +63,10 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 			id: guild.id,
 			name: guild.name,
 			iconUrl: guild.icon
-				? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.webp?size=128`
+				? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${guild.icon.startsWith('a_') ? 'gif' : 'webp'}?size=128`
 				: null
 		},
+		user: session.user,
 		config: {
 			exists: serverConfig !== null,
 			logsConfigured: Boolean(serverConfig?.log_channel_id),

@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 
 	let { data, form } = $props();
+	let activeTab = $state<'overview' | 'general' | 'tickets'>('overview');
+
+	$effect(() => {
+		if (form?.section === 'tickets' || form?.section === 'publishTickets') activeTab = 'tickets';
+		else if (form?.section === 'general') activeTab = 'general';
+	});
 
 	const modules = $derived([
 		{
@@ -48,7 +55,7 @@
 			<a href={resolve('/dashboard')} class="text-sm text-zinc-400 transition hover:text-white">
 				← Tous les serveurs
 			</a>
-			<span class="text-sm font-semibold">Kepler</span>
+			<ProfileMenu user={data.user} />
 		</div>
 	</header>
 
@@ -72,363 +79,395 @@
 			</div>
 		</div>
 
-		<section class="mt-10 grid gap-4 sm:grid-cols-3">
-			<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-				<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">Base de données</p>
-				<p class="mt-3 font-semibold">
-					{data.config.exists ? 'Configuration trouvée' : 'À initialiser'}
-				</p>
-			</div>
-			<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-				<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">Fuseau horaire</p>
-				<p class="mt-3 font-semibold">{data.config.timezone}</p>
-			</div>
-			<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-				<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">
-					Dernière modification
-				</p>
-				<p class="mt-3 font-semibold">
-					{data.config.updatedAt
-						? new Intl.DateTimeFormat('fr-FR', {
-								dateStyle: 'medium',
-								timeStyle: 'short'
-							}).format(new Date(data.config.updatedAt))
-						: 'Aucune'}
-				</p>
-			</div>
-		</section>
-
-		<section class="mt-10">
-			<div>
-				<p class="text-sm font-medium text-violet-300">Configuration Supabase</p>
-				<h2 class="mt-2 text-2xl font-semibold">Modules du serveur</h2>
-				<p class="mt-2 text-sm text-zinc-500">
-					État lu directement depuis la base partagée avec Kepler.
-				</p>
-			</div>
-
-			<div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-				{#each modules as module (module.name)}
-					<article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-						<div class="flex items-start justify-between gap-4">
-							<div>
-								<h3 class="font-semibold">{module.name}</h3>
-								<p class="mt-2 text-sm leading-6 text-zinc-500">{module.description}</p>
-							</div>
-							<span
-								class={[
-									'shrink-0 rounded-full px-2.5 py-1 text-xs',
-									module.configured
-										? 'bg-emerald-400/10 text-emerald-400'
-										: 'bg-amber-400/10 text-amber-300'
-								]}
-							>
-								{module.configured ? 'Configuré' : 'À configurer'}
-							</span>
-						</div>
-					</article>
-				{/each}
-			</div>
-		</section>
-
-		<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
-			<div>
-				<p class="text-sm font-medium text-violet-300">Réglages généraux</p>
-				<h2 class="mt-2 text-2xl font-semibold">Canaux, rôle et fuseau horaire</h2>
-				<p class="mt-2 text-sm text-zinc-500">
-					Les options sont chargées directement depuis Discord et validées avant enregistrement.
-				</p>
-			</div>
-
-			{#if form?.message}
-				<div
+		<nav
+			class="mt-10 flex gap-1 overflow-x-auto border-b border-white/10"
+			aria-label="Configuration"
+		>
+			{#each [['overview', 'Vue d’ensemble'], ['general', 'Général'], ['tickets', 'Tickets']] as tab (tab[0])}
+				<button
+					type="button"
+					onclick={() => (activeTab = tab[0] as typeof activeTab)}
 					class={[
-						'mt-6 rounded-xl border px-4 py-3 text-sm',
-						form.success
-							? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
-							: 'border-red-400/20 bg-red-400/10 text-red-300'
+						'border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition',
+						activeTab === tab[0]
+							? 'border-violet-400 text-violet-300'
+							: 'border-transparent text-zinc-500 hover:text-zinc-200'
 					]}
-					role="status"
 				>
-					{form.message}
+					{tab[1]}
+				</button>
+			{/each}
+		</nav>
+
+		{#if activeTab === 'overview'}
+			<section class="mt-10 grid gap-4 sm:grid-cols-3">
+				<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+					<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">Base de données</p>
+					<p class="mt-3 font-semibold">
+						{data.config.exists ? 'Configuration trouvée' : 'À initialiser'}
+					</p>
 				</div>
-			{/if}
-
-			<form method="POST" action="?/general" class="mt-7 grid gap-5 md:grid-cols-2">
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Canal des journaux</span>
-					<select
-						name="log_channel_id"
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="">Non configuré</option>
-						{#each data.channels as channel (channel.id)}
-							<option value={channel.id} selected={channel.id === data.config.logChannelId}>
-								#{channel.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Canal des anniversaires</span>
-					<select
-						name="birthday_channel_id"
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="">Non configuré</option>
-						{#each data.channels as channel (channel.id)}
-							<option value={channel.id} selected={channel.id === data.config.birthdayChannelId}>
-								#{channel.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Canal de modération</span>
-					<select
-						name="moderation_channel_id"
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="">Non configuré</option>
-						{#each data.channels as channel (channel.id)}
-							<option value={channel.id} selected={channel.id === data.config.moderationChannelId}>
-								#{channel.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Rôle muet</span>
-					<select
-						name="mute_role_id"
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="">Non configuré</option>
-						{#each data.roles as role (role.id)}
-							<option value={role.id} selected={role.id === data.config.muteRoleId}>
-								@{role.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm md:col-span-2">
-					<span class="font-medium text-zinc-300">Fuseau horaire</span>
-					<select
-						name="timezone"
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						{#each data.timezones as timezone (timezone)}
-							<option value={timezone} selected={timezone === data.config.timezone}
-								>{timezone}</option
-							>
-						{/each}
-					</select>
-				</label>
-
-				<div class="md:col-span-2">
-					<button
-						type="submit"
-						class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
-					>
-						Enregistrer les réglages
-					</button>
+				<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+					<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">Fuseau horaire</p>
+					<p class="mt-3 font-semibold">{data.config.timezone}</p>
 				</div>
-			</form>
-		</section>
-
-		<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
-			<div>
-				<p class="text-sm font-medium text-violet-300">Module Tickets</p>
-				<h2 class="mt-2 text-2xl font-semibold">Support et panneau public</h2>
-				<p class="mt-2 text-sm text-zinc-500">
-					Configure la création des salons privés et personnalise le bouton affiché aux membres.
-				</p>
-			</div>
-
-			{#if form?.section === 'tickets' && form.message}
-				<div
-					class="mt-6 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
-					role="status"
-				>
-					{form.message}
+				<div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+					<p class="text-xs font-medium tracking-wider text-zinc-500 uppercase">
+						Dernière modification
+					</p>
+					<p class="mt-3 font-semibold">
+						{data.config.updatedAt
+							? new Intl.DateTimeFormat('fr-FR', {
+									dateStyle: 'medium',
+									timeStyle: 'short'
+								}).format(new Date(data.config.updatedAt))
+							: 'Aucune'}
+					</p>
 				</div>
-			{/if}
+			</section>
 
-			<form method="POST" action="?/tickets" class="mt-7 grid gap-5 md:grid-cols-2">
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Canal du panneau</span>
-					<select
-						name="ticket_panel_channel_id"
-						required
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="" disabled>Sélectionner un canal</option>
-						{#each data.channels as channel (channel.id)}
-							<option value={channel.id} selected={channel.id === data.config.ticketPanelChannelId}>
-								#{channel.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Catégorie des tickets</span>
-					<select
-						name="ticket_category_id"
-						required
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="" disabled>Sélectionner une catégorie</option>
-						{#each data.categories as category (category.id)}
-							<option value={category.id} selected={category.id === data.config.ticketCategoryId}>
-								{category.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Canal des journaux</span>
-					<select
-						name="ticket_log_channel_id"
-						required
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="" disabled>Sélectionner un canal</option>
-						{#each data.channels as channel (channel.id)}
-							<option value={channel.id} selected={channel.id === data.config.ticketLogChannelId}>
-								#{channel.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Rôle support</span>
-					<select
-						name="ticket_support_role_id"
-						required
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					>
-						<option value="" disabled>Sélectionner un rôle</option>
-						{#each data.roles as role (role.id)}
-							<option value={role.id} selected={role.id === data.config.ticketSupportRoleId}>
-								@{role.name}
-							</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="grid gap-2 text-sm md:col-span-2">
-					<span class="font-medium text-zinc-300">Titre du panneau</span>
-					<input
-						name="ticket_panel_title"
-						required
-						maxlength="256"
-						value={data.config.ticketPanelTitle}
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					/>
-				</label>
-
-				<label class="grid gap-2 text-sm md:col-span-2">
-					<span class="font-medium text-zinc-300">Message du panneau</span>
-					<textarea
-						name="ticket_panel_message"
-						required
-						maxlength="2000"
-						rows="4"
-						class="resize-y rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-						>{data.config.ticketPanelMessage}</textarea
-					>
-				</label>
-
-				<label class="grid gap-2 text-sm">
-					<span class="font-medium text-zinc-300">Texte du bouton</span>
-					<input
-						name="ticket_button_label"
-						required
-						maxlength="80"
-						value={data.config.ticketButtonLabel}
-						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-					/>
-				</label>
-
-				<div class="grid grid-cols-[0.65fr_1.35fr] gap-4">
-					<label class="grid gap-2 text-sm">
-						<span class="font-medium text-zinc-300">Emoji</span>
-						<input
-							name="ticket_button_emoji"
-							maxlength="100"
-							value={data.config.ticketButtonEmoji}
-							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-						/>
-					</label>
-					<label class="grid gap-2 text-sm">
-						<span class="font-medium text-zinc-300">Style</span>
-						<select
-							name="ticket_button_style"
-							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
-						>
-							{#each data.ticketStyles as style (style)}
-								<option value={style} selected={style === data.config.ticketButtonStyle}>
-									{style}
-								</option>
-							{/each}
-						</select>
-					</label>
+			<section class="mt-10">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Configuration Supabase</p>
+					<h2 class="mt-2 text-2xl font-semibold">Modules du serveur</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						État lu directement depuis la base partagée avec Kepler.
+					</p>
 				</div>
 
-				<div class="md:col-span-2">
-					<button
-						type="submit"
-						class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
-					>
-						Enregistrer les tickets
-					</button>
+				<div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+					{#each modules as module (module.name)}
+						<article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+							<div class="flex items-start justify-between gap-4">
+								<div>
+									<h3 class="font-semibold">{module.name}</h3>
+									<p class="mt-2 text-sm leading-6 text-zinc-500">{module.description}</p>
+								</div>
+								<span
+									class={[
+										'shrink-0 rounded-full px-2.5 py-1 text-xs',
+										module.configured
+											? 'bg-emerald-400/10 text-emerald-400'
+											: 'bg-amber-400/10 text-amber-300'
+									]}
+								>
+									{module.configured ? 'Configuré' : 'À configurer'}
+								</span>
+							</div>
+						</article>
+					{/each}
 				</div>
-			</form>
+			</section>
+		{/if}
 
-			<div class="mt-8 border-t border-white/10 pt-7">
-				<div class="flex flex-wrap items-center justify-between gap-5">
-					<div>
-						<h3 class="font-semibold">Publication Discord</h3>
-						<p class="mt-2 max-w-2xl text-sm text-zinc-500">
-							Un nouveau panneau sera envoyé. Si un précédent message est mémorisé, il sera ensuite
-							supprimé automatiquement.
-						</p>
-					</div>
-
-					<form
-						method="POST"
-						action="?/publishTickets"
-						onsubmit={(event) => {
-							if (!confirm('Publier un nouveau panneau de tickets dans Discord ?')) {
-								event.preventDefault();
-							}
-						}}
-					>
-						<button
-							type="submit"
-							class="rounded-xl border border-violet-400/30 bg-violet-400/10 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
-						>
-							{data.config.ticketPanelMessageId ? 'Remplacer le panneau' : 'Publier le panneau'}
-						</button>
-					</form>
+		{#if activeTab === 'general'}
+			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Réglages généraux</p>
+					<h2 class="mt-2 text-2xl font-semibold">Canaux, rôle et fuseau horaire</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						Les options sont chargées directement depuis Discord et validées avant enregistrement.
+					</p>
 				</div>
 
-				{#if form?.section === 'publishTickets' && form.message}
+				{#if form?.message}
 					<div
-						class="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
+						class={[
+							'mt-6 rounded-xl border px-4 py-3 text-sm',
+							form.success
+								? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+								: 'border-red-400/20 bg-red-400/10 text-red-300'
+						]}
 						role="status"
 					>
 						{form.message}
 					</div>
 				{/if}
-			</div>
-		</section>
+
+				<form method="POST" action="?/general" class="mt-7 grid gap-5 md:grid-cols-2">
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal des journaux</span>
+						<select
+							name="log_channel_id"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="">Non configuré</option>
+							{#each data.channels as channel (channel.id)}
+								<option value={channel.id} selected={channel.id === data.config.logChannelId}>
+									#{channel.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal des anniversaires</span>
+						<select
+							name="birthday_channel_id"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="">Non configuré</option>
+							{#each data.channels as channel (channel.id)}
+								<option value={channel.id} selected={channel.id === data.config.birthdayChannelId}>
+									#{channel.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal de modération</span>
+						<select
+							name="moderation_channel_id"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="">Non configuré</option>
+							{#each data.channels as channel (channel.id)}
+								<option
+									value={channel.id}
+									selected={channel.id === data.config.moderationChannelId}
+								>
+									#{channel.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Rôle muet</span>
+						<select
+							name="mute_role_id"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="">Non configuré</option>
+							{#each data.roles as role (role.id)}
+								<option value={role.id} selected={role.id === data.config.muteRoleId}>
+									@{role.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm md:col-span-2">
+						<span class="font-medium text-zinc-300">Fuseau horaire</span>
+						<select
+							name="timezone"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							{#each data.timezones as timezone (timezone)}
+								<option value={timezone} selected={timezone === data.config.timezone}
+									>{timezone}</option
+								>
+							{/each}
+						</select>
+					</label>
+
+					<div class="md:col-span-2">
+						<button
+							type="submit"
+							class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+						>
+							Enregistrer les réglages
+						</button>
+					</div>
+				</form>
+			</section>
+		{/if}
+
+		{#if activeTab === 'tickets'}
+			<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+				<div>
+					<p class="text-sm font-medium text-violet-300">Module Tickets</p>
+					<h2 class="mt-2 text-2xl font-semibold">Support et panneau public</h2>
+					<p class="mt-2 text-sm text-zinc-500">
+						Configure la création des salons privés et personnalise le bouton affiché aux membres.
+					</p>
+				</div>
+
+				{#if form?.section === 'tickets' && form.message}
+					<div
+						class="mt-6 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
+						role="status"
+					>
+						{form.message}
+					</div>
+				{/if}
+
+				<form method="POST" action="?/tickets" class="mt-7 grid gap-5 md:grid-cols-2">
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal du panneau</span>
+						<select
+							name="ticket_panel_channel_id"
+							required
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="" disabled>Sélectionner un canal</option>
+							{#each data.channels as channel (channel.id)}
+								<option
+									value={channel.id}
+									selected={channel.id === data.config.ticketPanelChannelId}
+								>
+									#{channel.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Catégorie des tickets</span>
+						<select
+							name="ticket_category_id"
+							required
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="" disabled>Sélectionner une catégorie</option>
+							{#each data.categories as category (category.id)}
+								<option value={category.id} selected={category.id === data.config.ticketCategoryId}>
+									{category.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Canal des journaux</span>
+						<select
+							name="ticket_log_channel_id"
+							required
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="" disabled>Sélectionner un canal</option>
+							{#each data.channels as channel (channel.id)}
+								<option value={channel.id} selected={channel.id === data.config.ticketLogChannelId}>
+									#{channel.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Rôle support</span>
+						<select
+							name="ticket_support_role_id"
+							required
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							<option value="" disabled>Sélectionner un rôle</option>
+							{#each data.roles as role (role.id)}
+								<option value={role.id} selected={role.id === data.config.ticketSupportRoleId}>
+									@{role.name}
+								</option>
+							{/each}
+						</select>
+					</label>
+
+					<label class="grid gap-2 text-sm md:col-span-2">
+						<span class="font-medium text-zinc-300">Titre du panneau</span>
+						<input
+							name="ticket_panel_title"
+							required
+							maxlength="256"
+							value={data.config.ticketPanelTitle}
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						/>
+					</label>
+
+					<label class="grid gap-2 text-sm md:col-span-2">
+						<span class="font-medium text-zinc-300">Message du panneau</span>
+						<textarea
+							name="ticket_panel_message"
+							required
+							maxlength="2000"
+							rows="4"
+							class="resize-y rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+							>{data.config.ticketPanelMessage}</textarea
+						>
+					</label>
+
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Texte du bouton</span>
+						<input
+							name="ticket_button_label"
+							required
+							maxlength="80"
+							value={data.config.ticketButtonLabel}
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						/>
+					</label>
+
+					<div class="grid grid-cols-[0.65fr_1.35fr] gap-4">
+						<label class="grid gap-2 text-sm">
+							<span class="font-medium text-zinc-300">Emoji</span>
+							<input
+								name="ticket_button_emoji"
+								maxlength="100"
+								value={data.config.ticketButtonEmoji}
+								class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+							/>
+						</label>
+						<label class="grid gap-2 text-sm">
+							<span class="font-medium text-zinc-300">Style</span>
+							<select
+								name="ticket_button_style"
+								class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+							>
+								{#each data.ticketStyles as style (style)}
+									<option value={style} selected={style === data.config.ticketButtonStyle}>
+										{style}
+									</option>
+								{/each}
+							</select>
+						</label>
+					</div>
+
+					<div class="md:col-span-2">
+						<button
+							type="submit"
+							class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+						>
+							Enregistrer les tickets
+						</button>
+					</div>
+				</form>
+
+				<div class="mt-8 border-t border-white/10 pt-7">
+					<div class="flex flex-wrap items-center justify-between gap-5">
+						<div>
+							<h3 class="font-semibold">Publication Discord</h3>
+							<p class="mt-2 max-w-2xl text-sm text-zinc-500">
+								Un nouveau panneau sera envoyé. Si un précédent message est mémorisé, il sera
+								ensuite supprimé automatiquement.
+							</p>
+						</div>
+
+						<form
+							method="POST"
+							action="?/publishTickets"
+							onsubmit={(event) => {
+								if (!confirm('Publier un nouveau panneau de tickets dans Discord ?')) {
+									event.preventDefault();
+								}
+							}}
+						>
+							<button
+								type="submit"
+								class="rounded-xl border border-violet-400/30 bg-violet-400/10 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
+							>
+								{data.config.ticketPanelMessageId ? 'Remplacer le panneau' : 'Publier le panneau'}
+							</button>
+						</form>
+					</div>
+
+					{#if form?.section === 'publishTickets' && form.message}
+						<div
+							class="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
+							role="status"
+						>
+							{form.message}
+						</div>
+					{/if}
+				</div>
+			</section>
+		{/if}
 	</main>
 </div>
