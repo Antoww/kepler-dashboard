@@ -1,12 +1,17 @@
 import { getBotToken } from '$lib/server/auth/config';
 import {
 	getBotGuildIds,
+	getGuildCategories,
 	getGuildChannels,
 	getGuildRoles,
 	getManageableGuilds
 } from '$lib/server/auth/discord';
 import { getSession } from '$lib/server/auth/session';
-import { getServerConfig, updateGeneralConfig } from '$lib/server/database/supabase';
+import {
+	getServerConfig,
+	updateGeneralConfig,
+	updateTicketConfig
+} from '$lib/server/database/supabase';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -22,6 +27,7 @@ const TIMEZONES = [
 	'Australia/Sydney',
 	'UTC'
 ];
+const TICKET_STYLES = ['Primary', 'Secondary', 'Success', 'Danger'];
 
 export const load: PageServerLoad = async ({ cookies, params }) => {
 	const session = await getSession(cookies);
@@ -35,8 +41,9 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	const botGuildIds = await getBotGuildIds(botToken);
 	if (!botGuildIds.has(guild.id)) error(404, "Kepler n'est pas installé sur ce serveur.");
 
-	const [channels, roles] = await Promise.all([
+	const [channels, categories, roles] = await Promise.all([
 		getGuildChannels(guild.id, botToken),
+		getGuildCategories(guild.id, botToken),
 		getGuildRoles(guild.id, botToken)
 	]);
 
@@ -74,11 +81,24 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 			logChannelId: serverConfig?.log_channel_id || '',
 			birthdayChannelId: serverConfig?.birthday_channel_id || '',
 			moderationChannelId: serverConfig?.moderation_channel_id || '',
-			muteRoleId: serverConfig?.mute_role_id || ''
+			muteRoleId: serverConfig?.mute_role_id || '',
+			ticketPanelChannelId: serverConfig?.ticket_panel_channel_id || '',
+			ticketCategoryId: serverConfig?.ticket_category_id || '',
+			ticketLogChannelId: serverConfig?.ticket_log_channel_id || '',
+			ticketSupportRoleId: serverConfig?.ticket_support_role_id || '',
+			ticketPanelTitle: serverConfig?.ticket_panel_title || 'Besoin d’aide ?',
+			ticketPanelMessage:
+				serverConfig?.ticket_panel_message ||
+				'Cliquez sur le bouton ci-dessous pour ouvrir un ticket privé avec l’équipe du serveur.',
+			ticketButtonLabel: serverConfig?.ticket_button_label || 'Ouvrir un ticket',
+			ticketButtonEmoji: serverConfig?.ticket_button_emoji ?? '🎫',
+			ticketButtonStyle: serverConfig?.ticket_button_style || 'Primary'
 		},
 		channels: channels.map(({ id, name }) => ({ id, name })),
+		categories: categories.map(({ id, name }) => ({ id, name })),
 		roles: roles.map(({ id, name }) => ({ id, name })),
-		timezones: TIMEZONES
+		timezones: TIMEZONES,
+		ticketStyles: TICKET_STYLES
 	};
 };
 
@@ -138,6 +158,75 @@ export const actions: Actions = {
 			return fail(502, { message: "La configuration n'a pas pu être enregistrée." });
 		}
 
-		return { success: true, message: 'Configuration générale enregistrée.' };
+		return { success: true, section: 'general', message: 'Configuration générale enregistrée.' };
+	},
+	tickets: async ({ cookies, params, request }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		const manageableGuilds = await getManageableGuilds(session.accessToken);
+		if (!manageableGuilds.some((guild) => guild.id === guildId)) {
+			return fail(403, { message: "Tu n'as plus la permission de gérer ce serveur." });
+		}
+
+		const botToken = getBotToken();
+		const botGuildIds = await getBotGuildIds(botToken);
+		if (!botGuildIds.has(guildId)) {
+			return fail(404, { message: "Kepler n'est plus présent sur ce serveur." });
+		}
+
+		const formData = await request.formData();
+		const readValue = (name: string) => String(formData.get(name) || '').trim();
+		const panelChannelId = readValue('ticket_panel_channel_id');
+		const categoryId = readValue('ticket_category_id');
+		const logChannelId = readValue('ticket_log_channel_id');
+		const supportRoleId = readValue('ticket_support_role_id');
+		const panelTitle = readValue('ticket_panel_title');
+		const panelMessage = readValue('ticket_panel_message');
+		const buttonLabel = readValue('ticket_button_label');
+		const buttonEmoji = readValue('ticket_button_emoji');
+		const buttonStyle = readValue('ticket_button_style');
+		const [channels, categories, roles] = await Promise.all([
+			getGuildChannels(guildId, botToken),
+			getGuildCategories(guildId, botToken),
+			getGuildRoles(guildId, botToken)
+		]);
+
+		if (
+			!channels.some((channel) => channel.id === panelChannelId) ||
+			!categories.some((category) => category.id === categoryId) ||
+			!channels.some((channel) => channel.id === logChannelId) ||
+			!roles.some((role) => role.id === supportRoleId) ||
+			panelTitle.length < 1 ||
+			panelTitle.length > 256 ||
+			panelMessage.length < 1 ||
+			panelMessage.length > 2000 ||
+			buttonLabel.length < 1 ||
+			buttonLabel.length > 80 ||
+			buttonEmoji.length > 100 ||
+			!TICKET_STYLES.includes(buttonStyle)
+		) {
+			return fail(400, { message: 'La configuration des tickets contient une valeur invalide.' });
+		}
+
+		try {
+			await updateTicketConfig(guildId, {
+				ticket_panel_channel_id: panelChannelId,
+				ticket_category_id: categoryId,
+				ticket_log_channel_id: logChannelId,
+				ticket_support_role_id: supportRoleId,
+				ticket_panel_title: panelTitle,
+				ticket_panel_message: panelMessage,
+				ticket_button_label: buttonLabel,
+				ticket_button_emoji: buttonEmoji || null,
+				ticket_button_style: buttonStyle
+			});
+		} catch (cause) {
+			console.error('Unable to update ticket config', cause);
+			return fail(502, { message: "La configuration des tickets n'a pas pu être enregistrée." });
+		}
+
+		return { success: true, section: 'tickets', message: 'Configuration des tickets enregistrée.' };
 	}
 };

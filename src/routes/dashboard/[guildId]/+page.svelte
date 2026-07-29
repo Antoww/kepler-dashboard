@@ -239,5 +239,158 @@
 				</div>
 			</form>
 		</section>
+
+		<section class="mt-10 rounded-2xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+			<div>
+				<p class="text-sm font-medium text-violet-300">Module Tickets</p>
+				<h2 class="mt-2 text-2xl font-semibold">Support et panneau public</h2>
+				<p class="mt-2 text-sm text-zinc-500">
+					Configure la création des salons privés et personnalise le bouton affiché aux membres.
+				</p>
+			</div>
+
+			{#if form?.section === 'tickets' && form.message}
+				<div
+					class="mt-6 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-300"
+					role="status"
+				>
+					{form.message}
+				</div>
+			{/if}
+
+			<form method="POST" action="?/tickets" class="mt-7 grid gap-5 md:grid-cols-2">
+				<label class="grid gap-2 text-sm">
+					<span class="font-medium text-zinc-300">Canal du panneau</span>
+					<select
+						name="ticket_panel_channel_id"
+						required
+						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+					>
+						<option value="" disabled>Sélectionner un canal</option>
+						{#each data.channels as channel (channel.id)}
+							<option value={channel.id} selected={channel.id === data.config.ticketPanelChannelId}>
+								#{channel.name}
+							</option>
+						{/each}
+					</select>
+				</label>
+
+				<label class="grid gap-2 text-sm">
+					<span class="font-medium text-zinc-300">Catégorie des tickets</span>
+					<select
+						name="ticket_category_id"
+						required
+						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+					>
+						<option value="" disabled>Sélectionner une catégorie</option>
+						{#each data.categories as category (category.id)}
+							<option value={category.id} selected={category.id === data.config.ticketCategoryId}>
+								{category.name}
+							</option>
+						{/each}
+					</select>
+				</label>
+
+				<label class="grid gap-2 text-sm">
+					<span class="font-medium text-zinc-300">Canal des journaux</span>
+					<select
+						name="ticket_log_channel_id"
+						required
+						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+					>
+						<option value="" disabled>Sélectionner un canal</option>
+						{#each data.channels as channel (channel.id)}
+							<option value={channel.id} selected={channel.id === data.config.ticketLogChannelId}>
+								#{channel.name}
+							</option>
+						{/each}
+					</select>
+				</label>
+
+				<label class="grid gap-2 text-sm">
+					<span class="font-medium text-zinc-300">Rôle support</span>
+					<select
+						name="ticket_support_role_id"
+						required
+						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+					>
+						<option value="" disabled>Sélectionner un rôle</option>
+						{#each data.roles as role (role.id)}
+							<option value={role.id} selected={role.id === data.config.ticketSupportRoleId}>
+								@{role.name}
+							</option>
+						{/each}
+					</select>
+				</label>
+
+				<label class="grid gap-2 text-sm md:col-span-2">
+					<span class="font-medium text-zinc-300">Titre du panneau</span>
+					<input
+						name="ticket_panel_title"
+						required
+						maxlength="256"
+						value={data.config.ticketPanelTitle}
+						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+					/>
+				</label>
+
+				<label class="grid gap-2 text-sm md:col-span-2">
+					<span class="font-medium text-zinc-300">Message du panneau</span>
+					<textarea
+						name="ticket_panel_message"
+						required
+						maxlength="2000"
+						rows="4"
+						class="resize-y rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>{data.config.ticketPanelMessage}</textarea
+					>
+				</label>
+
+				<label class="grid gap-2 text-sm">
+					<span class="font-medium text-zinc-300">Texte du bouton</span>
+					<input
+						name="ticket_button_label"
+						required
+						maxlength="80"
+						value={data.config.ticketButtonLabel}
+						class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+					/>
+				</label>
+
+				<div class="grid grid-cols-[0.65fr_1.35fr] gap-4">
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Emoji</span>
+						<input
+							name="ticket_button_emoji"
+							maxlength="100"
+							value={data.config.ticketButtonEmoji}
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						/>
+					</label>
+					<label class="grid gap-2 text-sm">
+						<span class="font-medium text-zinc-300">Style</span>
+						<select
+							name="ticket_button_style"
+							class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+						>
+							{#each data.ticketStyles as style (style)}
+								<option value={style} selected={style === data.config.ticketButtonStyle}>
+									{style}
+								</option>
+							{/each}
+						</select>
+					</label>
+				</div>
+
+				<div class="md:col-span-2">
+					<button
+						type="submit"
+						class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400"
+					>
+						Enregistrer les tickets
+					</button>
+				</div>
+			</form>
+		</section>
 	</main>
 </div>

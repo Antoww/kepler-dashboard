@@ -197,6 +197,23 @@ export async function getGuildChannels(
 		.sort((first, second) => first.position - second.position);
 }
 
+export async function getGuildCategories(
+	guildId: string,
+	botToken: string
+): Promise<DiscordChannel[]> {
+	const response = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'User-Agent': USER_AGENT
+		}
+	});
+	const channels = await parseDiscordResponse<DiscordChannel[]>(response);
+
+	return channels
+		.filter((channel) => channel.type === 4)
+		.sort((first, second) => first.position - second.position);
+}
+
 export async function getGuildRoles(guildId: string, botToken: string): Promise<DiscordRole[]> {
 	const response = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
 		headers: {

@@ -71,3 +71,32 @@ export async function updateGeneralConfig(
 
 	if (error) throw error;
 }
+
+export async function updateTicketConfig(
+	guildId: string,
+	values: Pick<
+		ServerConfigRow,
+		| 'ticket_panel_channel_id'
+		| 'ticket_category_id'
+		| 'ticket_log_channel_id'
+		| 'ticket_support_role_id'
+		| 'ticket_panel_title'
+		| 'ticket_panel_message'
+		| 'ticket_button_label'
+		| 'ticket_button_emoji'
+		| 'ticket_button_style'
+	>
+): Promise<void> {
+	const { error } = await getSupabase()
+		.from('server_configs')
+		.upsert(
+			{
+				guild_id: guildId,
+				...values,
+				updated_at: new Date().toISOString()
+			},
+			{ onConflict: 'guild_id' }
+		);
+
+	if (error) throw error;
+}
