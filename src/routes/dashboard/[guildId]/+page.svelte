@@ -26,8 +26,13 @@
 	let ticketButtonLabel = $state('');
 	let ticketButtonEmoji = $state('');
 	let ticketButtonStyle = $state('Primary');
-	let statsView = $state<'server' | 'activity'>('server');
-	let activityPeriod = $state<7 | 30 | 90>(30);
+	let statsView = $state<'overview' | 'activity' | 'members' | 'channels' | 'users' | 'commands'>(
+		'overview'
+	);
+	let activityPeriod = $state<7 | 30 | 90 | 180 | 360 | 'all'>(30);
+	let rankingItems = $state<Array<{ id: string; label: string; count: number }>>([]);
+	let rankingLoading = $state(false);
+	let rankingError = $state('');
 
 	$effect(() => {
 		ticketPanelTitle = data.config.ticketPanelTitle;
@@ -107,9 +112,22 @@
 		}
 	]);
 	const activityRows = $derived.by(() => {
-		const cutoff = new Date(Date.now() - activityPeriod * 24 * 60 * 60 * 1000);
-		const cutoffKey = cutoff.toISOString().slice(0, 10);
-		return data.activity.filter((row) => row.date >= cutoffKey);
+		const source = new Map(data.activity.map((row) => [row.date, row]));
+		const firstDate = data.activity[0]?.date;
+		if (!firstDate) return [];
+		const dayMs = 24 * 60 * 60 * 1000;
+		const todayKey = new Date().toISOString().slice(0, 10);
+		const end = Date.parse(`${todayKey}T00:00:00Z`);
+		const start =
+			activityPeriod === 'all'
+				? Date.parse(`${firstDate}T00:00:00Z`)
+				: end - (activityPeriod - 1) * dayMs;
+		const rows = [];
+		for (let timestamp = start; timestamp <= end; timestamp += dayMs) {
+			const date = new Date(timestamp).toISOString().slice(0, 10);
+			rows.push(source.get(date) ?? { date, messages: 0, commands: 0, users: 0 });
+		}
+		return rows;
 	});
 	const activityTotals = $derived({
 		messages: activityRows.reduce((total, row) => total + row.messages, 0),
@@ -118,6 +136,7 @@
 	const activityMax = $derived(
 		Math.max(1, ...activityRows.flatMap((row) => [row.messages, row.commands]))
 	);
+	const rankingMax = $derived(Math.max(...rankingItems.map((item) => item.count), 1));
 	function activityPoints(metric: 'messages' | 'commands') {
 		return activityRows
 			.map((row, index) => {
@@ -127,6 +146,33 @@
 			})
 			.join(' ');
 	}
+
+	$effect(() => {
+		if (!['channels', 'users', 'commands'].includes(statsView)) return;
+		const controller = new AbortController();
+		rankingLoading = true;
+		rankingError = '';
+		fetch(`/dashboard/${data.guild.id}/stats?view=${statsView}&days=${activityPeriod}&limit=10`, {
+			signal: controller.signal
+		})
+			.then(async (response) => {
+				if (!response.ok) throw new Error('Impossible de charger ce classement.');
+				return response.json() as Promise<{
+					items: Array<{ id: string; label: string; count: number }>;
+				}>;
+			})
+			.then((result) => {
+				rankingItems = result.items;
+			})
+			.catch((cause) => {
+				if (cause instanceof DOMException && cause.name === 'AbortError') return;
+				rankingError = cause instanceof Error ? cause.message : 'Une erreur est survenue.';
+			})
+			.finally(() => {
+				if (!controller.signal.aborted) rankingLoading = false;
+			});
+		return () => controller.abort();
+	});
 
 	const modules = $derived([
 		{
@@ -341,25 +387,21 @@
 						<section class="mt-10">
 							<div>
 								<p class="text-sm font-medium text-violet-300">Statistiques</p>
-								<h2 class="mt-2 text-2xl font-semibold">
-									{statsView === 'server' ? 'Aperçu du serveur' : 'Activité suivie par Kepler'}
-								</h2>
+								<h2 class="mt-2 text-2xl font-semibold">Analyse du serveur</h2>
 								<p class="mt-2 text-sm text-zinc-500">
-									{statsView === 'server'
-										? 'Informations générales fournies par Discord.'
-										: 'Messages et commandes enregistrés quotidiennement par le bot.'}
+									Retrouvez les données suivies par Kepler et les informations fournies par Discord.
 								</p>
 							</div>
 
 							<div
-								class="mt-6 flex w-fit gap-1 rounded-xl border border-white/[0.08] bg-black/15 p-1"
+								class="mt-6 flex max-w-full gap-1 overflow-x-auto rounded-xl border border-white/[0.08] bg-black/15 p-1"
 							>
-								{#each [['server', 'Serveur'], ['activity', 'Activité']] as view (view[0])}
+								{#each [['overview', 'Vue d’ensemble'], ['activity', 'Activité'], ['members', 'Membres'], ['channels', 'Canaux'], ['users', 'Utilisateurs'], ['commands', 'Commandes']] as view (view[0])}
 									<button
 										type="button"
 										onclick={() => (statsView = view[0] as typeof statsView)}
 										class={[
-											'rounded-lg px-4 py-2 text-sm font-medium transition',
+											'rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition',
 											statsView === view[0]
 												? 'bg-violet-500/15 text-violet-300'
 												: 'text-zinc-500 hover:text-zinc-200'
@@ -370,7 +412,7 @@
 								{/each}
 							</div>
 
-							{#if statsView === 'server'}
+							{#if statsView === 'overview'}
 								<div class="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 									{#each serverStats as stat (stat.label)}
 										{@const Icon = stat.icon}
@@ -399,7 +441,7 @@
 									Les informations Discord sont conservées cinq minutes pour limiter les appels à
 									l’API. Le nombre de membres en ligne reste une estimation fournie par Discord.
 								</div>
-							{:else}
+							{:else if statsView === 'activity'}
 								<div class="mt-7 rounded-2xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
 									<div class="flex flex-wrap items-start justify-between gap-5">
 										<div class="flex gap-8">
@@ -417,7 +459,7 @@
 											</div>
 										</div>
 										<div class="flex gap-1 rounded-lg bg-black/20 p-1">
-											{#each [7, 30, 90] as period (period)}
+											{#each [7, 30, 90, 180, 360, 'all'] as period (period)}
 												<button
 													type="button"
 													onclick={() => (activityPeriod = period as typeof activityPeriod)}
@@ -428,7 +470,7 @@
 															: 'text-zinc-600 hover:text-zinc-300'
 													]}
 												>
-													{period} j
+													{period === 'all' ? 'Tout' : `${period} j`}
 												</button>
 											{/each}
 										</div>
@@ -440,7 +482,7 @@
 												viewBox="0 0 800 240"
 												class="h-auto w-full"
 												role="img"
-												aria-label={`Activité des ${activityPeriod} derniers jours`}
+												aria-label="Évolution quotidienne des messages et commandes"
 											>
 												{#each [30, 77.5, 125, 172.5, 220] as y (y)}
 													<line
@@ -468,7 +510,48 @@
 													stroke-linecap="round"
 													stroke-linejoin="round"
 												/>
+												{#each activityRows as row, index (row.date)}
+													{@const x =
+														activityRows.length === 1
+															? 400
+															: (index / (activityRows.length - 1)) * 760 + 20}
+													{@const messageY = 220 - (row.messages / activityMax) * 190}
+													{@const commandY = 220 - (row.commands / activityMax) * 190}
+													<circle
+														cx={x}
+														cy={messageY}
+														r={activityRows.length > 100 ? 2 : 3.5}
+														fill="#8b5cf6"
+													>
+														<title
+															>{new Date(row.date).toLocaleDateString('fr-FR')} — {row.messages} messages</title
+														>
+													</circle>
+													<circle
+														cx={x}
+														cy={commandY}
+														r={activityRows.length > 100 ? 2 : 3.5}
+														fill="#34d399"
+													>
+														<title
+															>{new Date(row.date).toLocaleDateString('fr-FR')} — {row.commands} commandes</title
+														>
+													</circle>
+												{/each}
 											</svg>
+											<div class="flex justify-between px-2 text-[10px] text-zinc-600">
+												<span>{new Date(activityRows[0].date).toLocaleDateString('fr-FR')}</span>
+												<span
+													>{new Date(
+														activityRows[Math.floor(activityRows.length / 2)].date
+													).toLocaleDateString('fr-FR')}</span
+												>
+												<span
+													>{new Date(activityRows[activityRows.length - 1].date).toLocaleDateString(
+														'fr-FR'
+													)}</span
+												>
+											</div>
 										</div>
 										<div class="mt-4 flex flex-wrap gap-5 text-xs text-zinc-500">
 											<span class="flex items-center gap-2">
@@ -483,6 +566,119 @@
 											class="mt-8 rounded-xl border border-dashed border-white/10 px-5 py-12 text-center text-sm text-zinc-500"
 										>
 											Aucune activité enregistrée sur cette période.
+										</div>
+									{/if}
+								</div>
+							{:else if statsView === 'members'}
+								<div class="mt-7 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+									<div class="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+										<p class="text-sm font-semibold">Présence des membres</p>
+										<div class="mt-8 space-y-6">
+											<div>
+												<div class="flex justify-between text-sm">
+													<span class="text-zinc-400">Membres</span>
+													<strong>{numberFormat.format(data.stats.memberCount)}</strong>
+												</div>
+												<div class="mt-2 h-3 overflow-hidden rounded-full bg-white/[0.06]">
+													<div class="h-full w-full rounded-full bg-violet-500"></div>
+												</div>
+											</div>
+											<div>
+												<div class="flex justify-between text-sm">
+													<span class="text-zinc-400">En ligne</span>
+													<strong>{numberFormat.format(data.stats.onlineCount)}</strong>
+												</div>
+												<div class="mt-2 h-3 overflow-hidden rounded-full bg-white/[0.06]">
+													<div
+														class="h-full rounded-full bg-emerald-400"
+														style:width={`${Math.min(100, (data.stats.onlineCount / Math.max(1, data.stats.memberCount)) * 100)}%`}
+													></div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+										<div class="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+											<p class="text-xs tracking-wider text-zinc-500 uppercase">Taux en ligne</p>
+											<p class="mt-3 text-3xl font-semibold">
+												{Math.round(
+													(data.stats.onlineCount / Math.max(1, data.stats.memberCount)) * 100
+												)} %
+											</p>
+										</div>
+										<div class="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+											<p class="text-xs tracking-wider text-zinc-500 uppercase">Boosts</p>
+											<p class="mt-3 text-3xl font-semibold">{data.stats.boostCount}</p>
+											<p class="mt-2 text-sm text-zinc-600">Niveau {data.stats.boostLevel}</p>
+										</div>
+									</div>
+								</div>
+							{:else}
+								<div class="mt-7 rounded-2xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+									<div class="flex flex-wrap items-center justify-between gap-4">
+										<div>
+											<h3 class="font-semibold">
+												{statsView === 'channels'
+													? 'Canaux les plus actifs'
+													: statsView === 'users'
+														? 'Utilisateurs les plus actifs'
+														: 'Commandes les plus utilisées'}
+											</h3>
+											<p class="mt-1 text-sm text-zinc-500">Classement par volume d’activité.</p>
+										</div>
+										<div class="flex gap-1 rounded-lg bg-black/20 p-1">
+											{#each [7, 30, 90, 180, 360, 'all'] as period (period)}
+												<button
+													type="button"
+													onclick={() => (activityPeriod = period as typeof activityPeriod)}
+													class={[
+														'rounded-md px-2.5 py-1.5 text-xs font-medium transition',
+														activityPeriod === period
+															? 'bg-white/10 text-white'
+															: 'text-zinc-600 hover:text-zinc-300'
+													]}
+												>
+													{period === 'all' ? 'Tout' : `${period} j`}
+												</button>
+											{/each}
+										</div>
+									</div>
+
+									{#if rankingLoading}
+										<div class="mt-8 space-y-3">
+											{#each [1, 2, 3, 4, 5, 6] as skeleton (skeleton)}
+												<div class="h-12 animate-pulse rounded-lg bg-white/[0.04]"></div>
+											{/each}
+										</div>
+									{:else if rankingError}
+										<div class="mt-8 rounded-xl bg-red-400/10 px-4 py-3 text-sm text-red-300">
+											{rankingError}
+										</div>
+									{:else if rankingItems.length}
+										<div class="mt-8 space-y-4">
+											{#each rankingItems as item, index (item.id)}
+												<div
+													class="grid gap-2 sm:grid-cols-[minmax(140px,220px)_1fr_80px] sm:items-center"
+												>
+													<div class="flex min-w-0 items-center gap-3">
+														<span class="w-5 text-xs text-zinc-600">{index + 1}</span>
+														<span class="truncate text-sm font-medium">{item.label}</span>
+													</div>
+													<div class="h-3 overflow-hidden rounded-full bg-white/[0.06]">
+														<div
+															class="h-full min-w-1 rounded-full bg-gradient-to-r from-violet-600 to-violet-400"
+															style:width={`${(item.count / rankingMax) * 100}%`}
+														></div>
+													</div>
+													<p class="text-right text-sm text-zinc-400">
+														{numberFormat.format(item.count)}
+													</p>
+												</div>
+											{/each}
+										</div>
+									{:else}
+										<div class="mt-8 py-12 text-center text-sm text-zinc-500">
+											Aucune donnée enregistrée sur cette période.
 										</div>
 									{/if}
 								</div>

@@ -60,17 +60,21 @@ export interface DailyActivityRow {
 	users: number;
 }
 
-export async function getServerActivity(guildId: string, days = 90): Promise<DailyActivityRow[]> {
-	const startDate = new Date();
-	startDate.setUTCDate(startDate.getUTCDate() - days);
-
-	const { data, error } = await getSupabase()
+export async function getServerActivity(
+	guildId: string,
+	days: number | null = null
+): Promise<DailyActivityRow[]> {
+	let query = getSupabase()
 		.from('daily_stats')
 		.select('stat_date, total_commands, total_messages, unique_users')
 		.eq('guild_id', guildId)
-		.gte('stat_date', startDate.toISOString().slice(0, 10))
 		.order('stat_date', { ascending: true });
+	if (days !== null) {
+		const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+		query = query.gte('stat_date', startDate.toISOString().slice(0, 10));
+	}
 
+	const { data, error } = await query;
 	if (error) throw error;
 	return (data ?? []).map((row) => ({
 		date: row.stat_date,
@@ -78,6 +82,68 @@ export async function getServerActivity(guildId: string, days = 90): Promise<Dai
 		messages: row.total_messages ?? 0,
 		users: row.unique_users ?? 0
 	}));
+}
+
+export interface RankedStat {
+	id: string;
+	count: number;
+}
+
+function periodStart(days: number | null, dateOnly = false): string | null {
+	if (days === null) return null;
+	const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+	return dateOnly ? start.slice(0, 10) : start;
+}
+
+export async function getTopCommands(
+	guildId: string,
+	days: number | null,
+	limit = 10
+): Promise<RankedStat[]> {
+	const start = periodStart(days);
+	let query = getSupabase().from('command_stats').select('command_name').eq('guild_id', guildId);
+	if (start) query = query.gte('executed_at', start);
+	const { data, error } = await query.limit(10_000);
+	if (error) throw error;
+
+	const counts = new Map<string, number>();
+	for (const row of data ?? []) {
+		counts.set(row.command_name, (counts.get(row.command_name) ?? 0) + 1);
+	}
+	return [...counts.entries()]
+		.map(([id, count]) => ({ id, count }))
+		.sort((first, second) => second.count - first.count)
+		.slice(0, limit);
+}
+
+export async function getTopMessageStats(
+	guildId: string,
+	groupBy: 'channel_id' | 'user_id',
+	days: number | null,
+	limit = 10
+): Promise<RankedStat[]> {
+	const start = periodStart(days, true);
+	let query = getSupabase()
+		.from('message_stats')
+		.select(`${groupBy}, message_count`)
+		.eq('guild_id', guildId);
+	if (start) query = query.gte('message_date', start);
+	const { data, error } = await query.limit(10_000);
+	if (error) throw error;
+
+	const counts = new Map<string, number>();
+	for (const row of data ?? []) {
+		const id = String(
+			groupBy === 'channel_id'
+				? (row as { channel_id: string }).channel_id
+				: (row as { user_id: string }).user_id
+		);
+		counts.set(id, (counts.get(id) ?? 0) + (row.message_count ?? 0));
+	}
+	return [...counts.entries()]
+		.map(([id, count]) => ({ id, count }))
+		.sort((first, second) => second.count - first.count)
+		.slice(0, limit);
 }
 
 export async function updateGeneralConfig(

@@ -69,6 +69,8 @@ export interface DiscordGuildResources {
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const guildStatsCache = new Map<string, { expiresAt: number; value: DiscordGuildStats }>();
 const guildResourcesCache = new Map<string, { expiresAt: number; value: DiscordGuildResources }>();
+const discordUserCache = new Map<string, { expiresAt: number; value: string }>();
+const manageableGuildsCache = new Map<string, { expiresAt: number; value: DiscordGuild[] }>();
 let botGuildIdsCache: { expiresAt: number; value: Set<string> } | null = null;
 
 function basicAuthorization(config: AuthConfig): string {
@@ -165,10 +167,19 @@ export function canManageGuild(guild: DiscordGuild): boolean {
 }
 
 export async function getManageableGuilds(accessToken: string): Promise<DiscordGuild[]> {
+	const cached = manageableGuildsCache.get(accessToken);
+	if (cached && cached.expiresAt > Date.now()) return cached.value;
+
 	const guilds = await getGuildPage(`Bearer ${accessToken}`);
-	return guilds
+	const manageableGuilds = guilds
 		.filter(canManageGuild)
 		.sort((first, second) => first.name.localeCompare(second.name));
+	if (manageableGuildsCache.size >= 500) manageableGuildsCache.clear();
+	manageableGuildsCache.set(accessToken, {
+		expiresAt: Date.now() + 2 * 60 * 1000,
+		value: manageableGuilds
+	});
+	return manageableGuilds;
 }
 
 export async function getBotGuildIds(botToken: string): Promise<Set<string>> {
@@ -267,6 +278,45 @@ export async function getGuildResources(
 		value: resources
 	});
 	return resources;
+}
+
+export async function getDiscordUserNames(
+	userIds: string[],
+	botToken: string
+): Promise<Map<string, string>> {
+	const names = new Map<string, string>();
+	const missing: string[] = [];
+	for (const userId of userIds) {
+		const cached = discordUserCache.get(userId);
+		if (cached && cached.expiresAt > Date.now()) names.set(userId, cached.value);
+		else missing.push(userId);
+	}
+
+	await Promise.all(
+		missing.map(async (userId) => {
+			try {
+				const response = await fetch(`${DISCORD_API}/users/${userId}`, {
+					headers: {
+						Authorization: `Bot ${botToken}`,
+						'User-Agent': USER_AGENT
+					}
+				});
+				const user = await parseDiscordResponse<{
+					username: string;
+					global_name?: string | null;
+				}>(response);
+				const name = user.global_name || user.username;
+				names.set(userId, name);
+				discordUserCache.set(userId, {
+					expiresAt: Date.now() + 60 * 60 * 1000,
+					value: name
+				});
+			} catch {
+				names.set(userId, 'Utilisateur inconnu');
+			}
+		})
+	);
+	return names;
 }
 
 export async function getGuildChannels(
