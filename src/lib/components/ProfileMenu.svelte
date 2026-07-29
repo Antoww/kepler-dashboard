@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { onMount } from 'svelte';
 
 	interface User {
 		id: string;
@@ -9,16 +10,37 @@
 	}
 
 	let { user }: { user: User | null } = $props();
+	let menu = $state<HTMLDetailsElement>();
 
 	const avatarUrl = $derived(
 		user?.avatar
 			? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${user.avatar.startsWith('a_') ? 'gif' : 'webp'}?size=128`
 			: null
 	);
+
+	onMount(() => {
+		const closeOutside = (event: PointerEvent) => {
+			if (menu?.open && !menu.contains(event.target as Node)) menu.open = false;
+		};
+		const closeOnEscape = (event: KeyboardEvent) => {
+			if (event.key === 'Escape' && menu?.open) {
+				menu.open = false;
+				menu.querySelector('summary')?.focus();
+			}
+		};
+
+		document.addEventListener('pointerdown', closeOutside);
+		document.addEventListener('keydown', closeOnEscape);
+
+		return () => {
+			document.removeEventListener('pointerdown', closeOutside);
+			document.removeEventListener('keydown', closeOnEscape);
+		};
+	});
 </script>
 
 {#if user}
-	<details class="group relative">
+	<details bind:this={menu} class="group relative">
 		<summary
 			class="flex cursor-pointer list-none items-center gap-3 rounded-xl border border-white/10 bg-white/5 py-1.5 pr-3 pl-1.5 transition hover:border-white/20 hover:bg-white/10 [&::-webkit-details-marker]:hidden"
 		>
