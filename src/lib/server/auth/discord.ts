@@ -38,6 +38,20 @@ interface DiscordApplication {
 	id: string;
 }
 
+export interface DiscordChannel {
+	id: string;
+	name: string;
+	type: number;
+	position: number;
+}
+
+export interface DiscordRole {
+	id: string;
+	name: string;
+	position: number;
+	managed: boolean;
+}
+
 function basicAuthorization(config: AuthConfig): string {
 	return `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`;
 }
@@ -164,6 +178,37 @@ export async function getBotApplicationId(botToken: string): Promise<string> {
 	const application = await parseDiscordResponse<DiscordApplication>(response);
 
 	return application.id;
+}
+
+export async function getGuildChannels(
+	guildId: string,
+	botToken: string
+): Promise<DiscordChannel[]> {
+	const response = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, {
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'User-Agent': USER_AGENT
+		}
+	});
+	const channels = await parseDiscordResponse<DiscordChannel[]>(response);
+
+	return channels
+		.filter((channel) => channel.type === 0 || channel.type === 5)
+		.sort((first, second) => first.position - second.position);
+}
+
+export async function getGuildRoles(guildId: string, botToken: string): Promise<DiscordRole[]> {
+	const response = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, {
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'User-Agent': USER_AGENT
+		}
+	});
+	const roles = await parseDiscordResponse<DiscordRole[]>(response);
+
+	return roles
+		.filter((role) => role.id !== guildId && !role.managed)
+		.sort((first, second) => second.position - first.position);
 }
 
 export async function revokeDiscordToken(token: string, config: AuthConfig): Promise<void> {

@@ -50,3 +50,24 @@ export async function getServerConfig(guildId: string): Promise<ServerConfigRow 
 	if (error) throw error;
 	return data as ServerConfigRow | null;
 }
+
+export async function updateGeneralConfig(
+	guildId: string,
+	values: Pick<
+		ServerConfigRow,
+		'log_channel_id' | 'birthday_channel_id' | 'moderation_channel_id' | 'mute_role_id' | 'timezone'
+	>
+): Promise<void> {
+	const { error } = await getSupabase()
+		.from('server_configs')
+		.upsert(
+			{
+				guild_id: guildId,
+				...values,
+				updated_at: new Date().toISOString()
+			},
+			{ onConflict: 'guild_id' }
+		);
+
+	if (error) throw error;
+}
