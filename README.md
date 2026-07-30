@@ -25,6 +25,8 @@ npm run format    # applique le formatage
 npm run build     # build de production
 npm run preview   # build et prévisualisation dans Workers
 npm run deploy    # build et déploiement Cloudflare
+npm run deploy:dev  # déploiement du Worker de développement
+npm run deploy:prod # déploiement du Worker de production
 ```
 
 ## Cloudflare Workers
@@ -40,6 +42,18 @@ npm run deploy
 
 `.dev.vars` contient les secrets locaux et ne doit jamais être commité. Les secrets de
 production sont enregistrés avec `npx wrangler secret put NOM_DU_SECRET`.
+
+Le Worker de production utilise `dashboard.kepler-bot.net`. L'environnement Wrangler
+`dev` crée un Worker séparé sur `dev.dashboard.kepler-bot.net` :
+
+```bash
+cp .dev.vars.dev.example .dev.vars.dev
+npm run preview:dev
+npm run deploy:dev
+```
+
+Les secrets distants du Worker de développement sont enregistrés avec
+`npx wrangler secret put NOM_DU_SECRET --env dev`.
 
 ## Architecture prévue
 

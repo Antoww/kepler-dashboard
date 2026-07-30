@@ -1,0 +1,14 @@
+ORIGIN=http://localhost:5173
+
+# Application Discord et bot de développement
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_REDIRECT_URI=http://localhost:5173/auth/discord/callback
+DISCORD_BOT_TOKEN=
+
+# Même projet Supabase que la production
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Générer une valeur dédiée avec : openssl rand -base64 32
+SESSION_SECRET=
