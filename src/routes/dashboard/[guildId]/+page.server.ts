@@ -164,17 +164,21 @@ export const actions: Actions = {
 		const footer = String(formData.get('footer') || '').trim();
 		const buttonLabel = String(formData.get('button_label') || '').trim();
 		const buttonUrl = optionalHttpUrl(String(formData.get('button_url') || '').trim());
+		const showDividers = formData.get('show_dividers') === 'on';
+		const largeSpacing = formData.get('large_spacing') === 'on';
+		const spoiler = formData.get('spoiler') === 'on';
+		const imageSpoiler = formData.get('image_spoiler') === 'on';
 
 		if (!(await getGuildChannels(guildId, botToken)).some(({ id }) => id === channelId)) {
 			return fail(400, { section: 'componentsV2', message: 'Le salon sélectionné est invalide.' });
 		}
-		if (!title || title.length > 200 || !description || description.length > 3500) {
+		if (title.length > 200 || description.length > 3500) {
 			return fail(400, {
 				section: 'componentsV2',
 				message: 'Le titre ou le contenu dépasse les limites autorisées.'
 			});
 		}
-		if (!HEX_COLOR.test(accentColor)) {
+		if (accentColor && !HEX_COLOR.test(accentColor)) {
 			return fail(400, { section: 'componentsV2', message: "La couleur d'accent est invalide." });
 		}
 		if (thumbnailUrl === null || imageUrl === null || buttonUrl === null) {
@@ -193,17 +197,33 @@ export const actions: Actions = {
 				message: 'Le texte secondaire ou le bouton est invalide.'
 			});
 		}
+		if (thumbnailUrl && !title && !description) {
+			return fail(400, {
+				section: 'componentsV2',
+				message: 'Une miniature doit accompagner un titre ou un bloc de texte.'
+			});
+		}
+		if (!title && !description && !imageUrl && !footer && !buttonLabel) {
+			return fail(400, {
+				section: 'componentsV2',
+				message: 'Ajoute au moins un texte, une image ou un bouton avant de publier.'
+			});
+		}
 
 		try {
 			const published = await publishComponentsV2Message(channelId, botToken, {
-				title,
-				description,
-				accentColor: Number.parseInt(accentColor.slice(1), 16),
+				title: title || undefined,
+				description: description || undefined,
+				accentColor: accentColor ? Number.parseInt(accentColor.slice(1), 16) : undefined,
 				thumbnailUrl: thumbnailUrl || undefined,
 				imageUrl: imageUrl || undefined,
+				imageSpoiler,
 				footer: footer || undefined,
 				buttonLabel: buttonLabel || undefined,
-				buttonUrl: buttonUrl || undefined
+				buttonUrl: buttonUrl || undefined,
+				showDividers,
+				largeSpacing,
+				spoiler
 			});
 			return {
 				success: true,

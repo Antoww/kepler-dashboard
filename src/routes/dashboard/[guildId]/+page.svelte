@@ -31,16 +31,19 @@
 		| 'reports'
 		| 'tickets'
 	>('overview');
-	let componentTitle = $state('Bienvenue sur notre serveur');
-	let componentDescription = $state(
-		'Retrouvez ici les informations essentielles et les liens utiles de la communauté.'
-	);
+	let componentTitle = $state('');
+	let componentDescription = $state('');
 	let componentColor = $state('#8b5cf6');
+	let componentUseAccent = $state(true);
 	let componentThumbnailUrl = $state('');
 	let componentImageUrl = $state('');
 	let componentFooter = $state('');
 	let componentButtonLabel = $state('');
 	let componentButtonUrl = $state('');
+	let componentShowDividers = $state(true);
+	let componentLargeSpacing = $state(false);
+	let componentSpoiler = $state(false);
+	let componentImageSpoiler = $state(false);
 	let ticketPanelTitle = $state('');
 	let ticketPanelMessage = $state('');
 	let ticketButtonLabel = $state('');
@@ -1050,21 +1053,37 @@
 
 									<div class="grid gap-5 sm:grid-cols-[minmax(0,1fr)_8rem]">
 										<label class="grid gap-2 text-sm">
-											<span class="font-medium text-zinc-300">Titre</span>
+											<span
+												class="flex items-center justify-between gap-2 font-medium text-zinc-300"
+											>
+												Titre
+												<span class="text-xs font-normal text-zinc-600">Facultatif</span>
+											</span>
 											<input
 												name="title"
-												required
 												maxlength="200"
+												placeholder="Bienvenue sur notre serveur"
 												bind:value={componentTitle}
 												class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 											/>
 										</label>
 										<label class="grid gap-2 text-sm">
-											<span class="font-medium text-zinc-300">Accent</span>
+											<span
+												class="flex items-center justify-between gap-2 font-medium text-zinc-300"
+											>
+												Accent
+												<input
+													type="checkbox"
+													bind:checked={componentUseAccent}
+													class="size-4 accent-violet-500"
+													aria-label="Afficher la barre d’accent"
+												/>
+											</span>
 											<input
-												name="accent_color"
+												name={componentUseAccent ? 'accent_color' : undefined}
 												type="color"
 												bind:value={componentColor}
+												disabled={!componentUseAccent}
 												class="h-[46px] w-full cursor-pointer rounded-xl border border-white/10 bg-zinc-900 p-1.5"
 											/>
 										</label>
@@ -1072,16 +1091,19 @@
 
 									<label class="grid gap-2 text-sm">
 										<span class="flex items-center justify-between gap-3 font-medium text-zinc-300">
-											Contenu Markdown
+											<span>
+												Contenu Markdown
+												<span class="ml-2 text-xs font-normal text-zinc-600">Facultatif</span>
+											</span>
 											<span class="text-xs font-normal text-zinc-600">
 												{componentDescription.length}/3500
 											</span>
 										</span>
 										<textarea
 											name="description"
-											required
 											maxlength="3500"
 											rows="8"
+											placeholder="Écris ici ton message. Le Markdown Discord est pris en charge."
 											bind:value={componentDescription}
 											class="resize-y rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 										></textarea>
@@ -1093,7 +1115,12 @@
 
 									<div class="grid gap-5 md:grid-cols-2">
 										<label class="grid gap-2 text-sm">
-											<span class="font-medium text-zinc-300">URL de la miniature</span>
+											<span
+												class="flex items-center justify-between gap-2 font-medium text-zinc-300"
+											>
+												URL de la miniature
+												<span class="text-xs font-normal text-zinc-600">Facultatif</span>
+											</span>
 											<input
 												name="thumbnail_url"
 												type="url"
@@ -1103,7 +1130,12 @@
 											/>
 										</label>
 										<label class="grid gap-2 text-sm">
-											<span class="font-medium text-zinc-300">URL de la bannière</span>
+											<span
+												class="flex items-center justify-between gap-2 font-medium text-zinc-300"
+											>
+												URL de la bannière
+												<span class="text-xs font-normal text-zinc-600">Facultatif</span>
+											</span>
 											<input
 												name="image_url"
 												type="url"
@@ -1115,7 +1147,10 @@
 									</div>
 
 									<label class="grid gap-2 text-sm">
-										<span class="font-medium text-zinc-300">Texte secondaire</span>
+										<span class="flex items-center justify-between gap-2 font-medium text-zinc-300">
+											Texte secondaire
+											<span class="text-xs font-normal text-zinc-600">Facultatif</span>
+										</span>
 										<input
 											name="footer"
 											maxlength="300"
@@ -1125,9 +1160,65 @@
 										/>
 									</label>
 
+									<fieldset class="grid gap-3 border-t border-white/[0.07] pt-5">
+										<legend class="mb-2 text-sm font-medium text-zinc-300">Options de rendu</legend>
+										<div class="grid gap-3 sm:grid-cols-2">
+											<label
+												class="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-black/10 px-4 py-3 text-sm text-zinc-400"
+											>
+												<input
+													name="show_dividers"
+													type="checkbox"
+													bind:checked={componentShowDividers}
+													class="size-4 accent-violet-500"
+												/>
+												Afficher les séparateurs
+											</label>
+											<label
+												class="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-black/10 px-4 py-3 text-sm text-zinc-400"
+											>
+												<input
+													name="large_spacing"
+													type="checkbox"
+													bind:checked={componentLargeSpacing}
+													class="size-4 accent-violet-500"
+												/>
+												Espacement large
+											</label>
+											<label
+												class="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-black/10 px-4 py-3 text-sm text-zinc-400"
+											>
+												<input
+													name="spoiler"
+													type="checkbox"
+													bind:checked={componentSpoiler}
+													class="size-4 accent-violet-500"
+												/>
+												Conteneur en spoiler
+											</label>
+											<label
+												class="flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.07] bg-black/10 px-4 py-3 text-sm text-zinc-400"
+											>
+												<input
+													name="image_spoiler"
+													type="checkbox"
+													bind:checked={componentImageSpoiler}
+													disabled={!componentImageUrl}
+													class="size-4 accent-violet-500 disabled:opacity-40"
+												/>
+												Bannière en spoiler
+											</label>
+										</div>
+									</fieldset>
+
 									<div class="grid gap-5 border-t border-white/[0.07] pt-5 md:grid-cols-2">
 										<label class="grid gap-2 text-sm">
-											<span class="font-medium text-zinc-300">Texte du bouton-lien</span>
+											<span
+												class="flex items-center justify-between gap-2 font-medium text-zinc-300"
+											>
+												Texte du bouton-lien
+												<span class="text-xs font-normal text-zinc-600">Facultatif</span>
+											</span>
 											<input
 												name="button_label"
 												maxlength="80"
@@ -1137,7 +1228,12 @@
 											/>
 										</label>
 										<label class="grid gap-2 text-sm">
-											<span class="font-medium text-zinc-300">URL du bouton</span>
+											<span
+												class="flex items-center justify-between gap-2 font-medium text-zinc-300"
+											>
+												URL du bouton
+												<span class="text-xs font-normal text-zinc-600">Facultatif</span>
+											</span>
 											<input
 												name="button_url"
 												type="url"
@@ -1185,7 +1281,9 @@
 
 												<div
 													class="relative mt-2 overflow-hidden rounded-lg border border-black/20 bg-[#2b2d31] p-4"
-													style={`border-left: 4px solid ${componentColor}`}
+													style={componentUseAccent
+														? `border-left: 4px solid ${componentColor}`
+														: 'border-left: 1px solid rgba(0,0,0,.2)'}
 												>
 													<div class="flex gap-4">
 														<div class="min-w-0 flex-1">
@@ -1207,18 +1305,32 @@
 													</div>
 
 													{#if componentImageUrl}
-														<div class="mt-4 border-t border-white/10 pt-4">
+														<div
+															class={[
+																componentLargeSpacing ? 'mt-6 pt-6' : 'mt-4 pt-4',
+																componentShowDividers ? 'border-t border-white/10' : ''
+															]}
+														>
 															<img
 																src={componentImageUrl}
 																alt=""
-																class="max-h-72 w-full rounded-lg object-cover"
+																class={[
+																	'max-h-72 w-full rounded-lg object-cover',
+																	componentImageSpoiler ? 'blur-xl' : ''
+																]}
 																referrerpolicy="no-referrer"
 															/>
 														</div>
 													{/if}
 
 													{#if componentFooter}
-														<p class="mt-4 border-t border-white/10 pt-3 text-xs text-[#949ba4]">
+														<p
+															class={[
+																'text-xs text-[#949ba4]',
+																componentLargeSpacing ? 'mt-6 pt-5' : 'mt-4 pt-3',
+																componentShowDividers ? 'border-t border-white/10' : ''
+															]}
+														>
 															{componentFooter}
 														</p>
 													{/if}

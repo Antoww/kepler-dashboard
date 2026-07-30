@@ -436,14 +436,18 @@ export async function publishTicketPanel(
 }
 
 export interface ComponentsV2MessagePayload {
-	title: string;
-	description: string;
-	accentColor: number;
+	title?: string;
+	description?: string;
+	accentColor?: number;
 	thumbnailUrl?: string;
 	imageUrl?: string;
+	imageSpoiler?: boolean;
 	footer?: string;
 	buttonLabel?: string;
 	buttonUrl?: string;
+	showDividers?: boolean;
+	largeSpacing?: boolean;
+	spoiler?: boolean;
 }
 
 export async function publishComponentsV2Message(
@@ -451,37 +455,50 @@ export async function publishComponentsV2Message(
 	botToken: string,
 	message: ComponentsV2MessagePayload
 ): Promise<{ id: string; channel_id: string }> {
-	const section: Record<string, unknown> = {
-		type: 9,
-		components: [
-			{
-				type: 10,
-				content: `# ${message.title}\n${message.description}`
-			}
-		]
-	};
-	if (message.thumbnailUrl) {
-		section.accessory = {
-			type: 11,
-			media: { url: message.thumbnailUrl }
+	const components: Record<string, unknown>[] = [];
+	if (message.title || message.description) {
+		const section: Record<string, unknown> = {
+			type: 9,
+			components: [
+				{
+					type: 10,
+					content: [message.title ? `# ${message.title}` : '', message.description || '']
+						.filter(Boolean)
+						.join('\n')
+				}
+			]
 		};
+		if (message.thumbnailUrl) {
+			section.accessory = {
+				type: 11,
+				media: { url: message.thumbnailUrl }
+			};
+		}
+		components.push(section);
 	}
 
-	const components: Record<string, unknown>[] = [section];
 	if (message.imageUrl) {
-		components.push(
-			{ type: 14, divider: true, spacing: 1 },
-			{
-				type: 12,
-				items: [{ media: { url: message.imageUrl } }]
-			}
-		);
+		if (components.length) {
+			components.push({
+				type: 14,
+				divider: message.showDividers ?? true,
+				spacing: message.largeSpacing ? 2 : 1
+			});
+		}
+		components.push({
+			type: 12,
+			items: [{ media: { url: message.imageUrl }, spoiler: message.imageSpoiler ?? false }]
+		});
 	}
 	if (message.footer) {
-		components.push(
-			{ type: 14, divider: true, spacing: 1 },
-			{ type: 10, content: `-# ${message.footer}` }
-		);
+		if (components.length) {
+			components.push({
+				type: 14,
+				divider: message.showDividers ?? true,
+				spacing: message.largeSpacing ? 2 : 1
+			});
+		}
+		components.push({ type: 10, content: `-# ${message.footer}` });
 	}
 	if (message.buttonLabel && message.buttonUrl) {
 		components.push({
@@ -497,6 +514,13 @@ export async function publishComponentsV2Message(
 		});
 	}
 
+	const container: Record<string, unknown> = {
+		type: 17,
+		components,
+		spoiler: message.spoiler ?? false
+	};
+	if (message.accentColor !== undefined) container.accent_color = message.accentColor;
+
 	const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
 		method: 'POST',
 		headers: {
@@ -506,13 +530,7 @@ export async function publishComponentsV2Message(
 		},
 		body: JSON.stringify({
 			flags: 1 << 15,
-			components: [
-				{
-					type: 17,
-					accent_color: message.accentColor,
-					components
-				}
-			],
+			components: [container],
 			allowed_mentions: { parse: [] }
 		})
 	});
