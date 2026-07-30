@@ -33,6 +33,7 @@
 	>('overview');
 	let componentTitle = $state('');
 	let componentDescription = $state('');
+	let componentChannelId = $state('');
 	let componentColor = $state('#8b5cf6');
 	let componentUseAccent = $state(true);
 	let componentThumbnailUrl = $state('');
@@ -56,6 +57,10 @@
 	let rankingItems = $state<Array<{ id: string; label: string; count: number }>>([]);
 	let rankingLoading = $state(false);
 	let rankingError = $state('');
+
+	$effect(() => {
+		if (!componentChannelId && data.channels[0]) componentChannelId = data.channels[0].id;
+	});
 
 	$effect(() => {
 		ticketPanelTitle = data.config.ticketPanelTitle;
@@ -1041,10 +1046,12 @@
 										<span class="font-medium text-zinc-300">Salon de publication</span>
 										<select
 											name="channel_id"
-											required
+											bind:value={componentChannelId}
 											class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
 										>
-											<option value="" disabled selected>Sélectionner un salon</option>
+											{#if !data.channels.length}
+												<option value="">Aucun salon disponible</option>
+											{/if}
 											{#each data.channels as channel (channel.id)}
 												<option value={channel.id}>#{channel.name}</option>
 											{/each}

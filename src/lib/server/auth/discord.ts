@@ -79,7 +79,10 @@ function basicAuthorization(config: AuthConfig): string {
 
 async function parseDiscordResponse<T>(response: Response): Promise<T> {
 	if (!response.ok) {
-		throw new Error(`Discord API request failed (${response.status})`);
+		const details = await response.text().catch(() => '');
+		throw new Error(
+			`Discord API request failed (${response.status})${details ? `: ${details.slice(0, 2000)}` : ''}`
+		);
 	}
 
 	return response.json() as Promise<T>;
@@ -457,24 +460,24 @@ export async function publishComponentsV2Message(
 ): Promise<{ id: string; channel_id: string }> {
 	const components: Record<string, unknown>[] = [];
 	if (message.title || message.description) {
-		const section: Record<string, unknown> = {
-			type: 9,
-			components: [
-				{
-					type: 10,
-					content: [message.title ? `# ${message.title}` : '', message.description || '']
-						.filter(Boolean)
-						.join('\n')
-				}
-			]
+		const textDisplay = {
+			type: 10,
+			content: [message.title ? `# ${message.title}` : '', message.description || '']
+				.filter(Boolean)
+				.join('\n')
 		};
 		if (message.thumbnailUrl) {
-			section.accessory = {
-				type: 11,
-				media: { url: message.thumbnailUrl }
-			};
+			components.push({
+				type: 9,
+				components: [textDisplay],
+				accessory: {
+					type: 11,
+					media: { url: message.thumbnailUrl }
+				}
+			});
+		} else {
+			components.push(textDisplay);
 		}
-		components.push(section);
 	}
 
 	if (message.imageUrl) {

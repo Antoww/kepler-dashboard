@@ -232,9 +232,15 @@ export const actions: Actions = {
 			};
 		} catch (cause) {
 			console.error('Unable to publish Components V2 message', cause);
+			const details =
+				cause instanceof Error
+					? cause.message.match(/Discord API request failed \(\d+\)(?:: (.+))?/u)?.[1]
+					: null;
 			return fail(502, {
 				section: 'componentsV2',
-				message: 'Discord a refusé la publication. Vérifie les URL et les permissions de Kepler.'
+				message: details
+					? `Discord a refusé la publication : ${details}`
+					: 'Discord a refusé la publication. Vérifie les URL et les permissions de Kepler.'
 			});
 		}
 	},
