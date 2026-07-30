@@ -76,6 +76,7 @@
 					<a href="#fonctionnalites" class="transition hover:text-white">Fonctionnalités</a>
 					<a href="#fonctionnement" class="transition hover:text-white">Fonctionnement</a>
 					<a href="#securite" class="transition hover:text-white">Sécurité</a>
+					<a href={resolve('/changelog')} class="transition hover:text-white">Changelog</a>
 				</nav>
 
 				<ProfileMenu user={data.user} />

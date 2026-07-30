@@ -23,6 +23,7 @@
 					Fonctionnalités
 				</a>
 				<a href={resolve('/dashboard')} class="transition hover:text-zinc-300">Mes serveurs</a>
+				<a href={resolve('/changelog')} class="transition hover:text-zinc-300">Changelog</a>
 			</nav>
 		</div>
 	{:else}
@@ -56,6 +57,7 @@
 					<p class="text-xs font-semibold tracking-wider text-zinc-300 uppercase">Dashboard</p>
 					<nav class="mt-4 flex flex-col gap-3 text-sm text-zinc-500" aria-label="Dashboard Kepler">
 						<a href={resolve('/dashboard')} class="transition hover:text-white">Mes serveurs</a>
+						<a href={resolve('/changelog')} class="transition hover:text-white">Changelog</a>
 						<a href={resolve('/auth/discord')} class="transition hover:text-white">
 							Connexion Discord
 						</a>

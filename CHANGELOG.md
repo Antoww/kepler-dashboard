@@ -11,6 +11,7 @@ le projet utilisera [Semantic Versioning](https://semver.org/lang/fr/).
 ### Ajouté
 
 - Créateur de messages Discord Components V2 avec aperçu en direct.
+- Page publique de changelog synchronisée avec les releases GitHub.
 - Footer commun pour l’accueil et les pages du dashboard.
 - Environnements Cloudflare distincts pour les bots de développement et de
   production.

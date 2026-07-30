@@ -21,6 +21,7 @@ une succession de commandes.
   - tickets et publication du panneau Discord
 - Statistiques du serveur et graphiques d’activité
 - Créateur de messages Discord Components V2 avec aperçu
+- Changelog public synchronisé avec les releases GitHub
 - Interface responsive avec navigation latérale
 - Séparation complète des applications Discord de développement et de production
 
