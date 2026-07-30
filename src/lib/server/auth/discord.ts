@@ -435,6 +435,91 @@ export async function publishTicketPanel(
 	return parseDiscordResponse<{ id: string; channel_id: string }>(response);
 }
 
+export interface ComponentsV2MessagePayload {
+	title: string;
+	description: string;
+	accentColor: number;
+	thumbnailUrl?: string;
+	imageUrl?: string;
+	footer?: string;
+	buttonLabel?: string;
+	buttonUrl?: string;
+}
+
+export async function publishComponentsV2Message(
+	channelId: string,
+	botToken: string,
+	message: ComponentsV2MessagePayload
+): Promise<{ id: string; channel_id: string }> {
+	const section: Record<string, unknown> = {
+		type: 9,
+		components: [
+			{
+				type: 10,
+				content: `# ${message.title}\n${message.description}`
+			}
+		]
+	};
+	if (message.thumbnailUrl) {
+		section.accessory = {
+			type: 11,
+			media: { url: message.thumbnailUrl }
+		};
+	}
+
+	const components: Record<string, unknown>[] = [section];
+	if (message.imageUrl) {
+		components.push(
+			{ type: 14, divider: true, spacing: 1 },
+			{
+				type: 12,
+				items: [{ media: { url: message.imageUrl } }]
+			}
+		);
+	}
+	if (message.footer) {
+		components.push(
+			{ type: 14, divider: true, spacing: 1 },
+			{ type: 10, content: `-# ${message.footer}` }
+		);
+	}
+	if (message.buttonLabel && message.buttonUrl) {
+		components.push({
+			type: 1,
+			components: [
+				{
+					type: 2,
+					style: 5,
+					label: message.buttonLabel,
+					url: message.buttonUrl
+				}
+			]
+		});
+	}
+
+	const response = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bot ${botToken}`,
+			'Content-Type': 'application/json',
+			'User-Agent': USER_AGENT
+		},
+		body: JSON.stringify({
+			flags: 1 << 15,
+			components: [
+				{
+					type: 17,
+					accent_color: message.accentColor,
+					components
+				}
+			],
+			allowed_mentions: { parse: [] }
+		})
+	});
+
+	return parseDiscordResponse<{ id: string; channel_id: string }>(response);
+}
+
 export async function deleteDiscordMessage(
 	channelId: string,
 	messageId: string,

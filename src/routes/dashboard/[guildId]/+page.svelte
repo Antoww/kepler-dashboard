@@ -10,6 +10,7 @@
 	import Hash from '@lucide/svelte/icons/hash';
 	import Languages from '@lucide/svelte/icons/languages';
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import PanelsTopLeft from '@lucide/svelte/icons/panels-top-left';
 	import Radio from '@lucide/svelte/icons/radio';
 	import ScrollText from '@lucide/svelte/icons/scroll-text';
 	import Settings from '@lucide/svelte/icons/settings';
@@ -20,8 +21,26 @@
 
 	let { data, form } = $props();
 	let activeTab = $state<
-		'overview' | 'stats' | 'general' | 'logs' | 'moderation' | 'birthdays' | 'reports' | 'tickets'
+		| 'overview'
+		| 'stats'
+		| 'componentsV2'
+		| 'general'
+		| 'logs'
+		| 'moderation'
+		| 'birthdays'
+		| 'reports'
+		| 'tickets'
 	>('overview');
+	let componentTitle = $state('Bienvenue sur notre serveur');
+	let componentDescription = $state(
+		'Retrouvez ici les informations essentielles et les liens utiles de la communauté.'
+	);
+	let componentColor = $state('#8b5cf6');
+	let componentThumbnailUrl = $state('');
+	let componentImageUrl = $state('');
+	let componentFooter = $state('');
+	let componentButtonLabel = $state('');
+	let componentButtonUrl = $state('');
 	let ticketPanelTitle = $state('');
 	let ticketPanelMessage = $state('');
 	let ticketButtonLabel = $state('');
@@ -44,7 +63,8 @@
 	});
 
 	$effect(() => {
-		if (
+		if (form?.section === 'componentsV2') activeTab = 'componentsV2';
+		else if (
 			form?.section === 'tickets' ||
 			form?.section === 'publishTickets' ||
 			form?.section === 'deleteTicketPanel'
@@ -66,6 +86,7 @@
 	const tabs = [
 		['overview', 'Vue d’ensemble', LayoutDashboard],
 		['stats', 'Statistiques', ChartNoAxesColumnIncreasing],
+		['componentsV2', 'Créateur V2', PanelsTopLeft],
 		['general', 'Général', Settings],
 		['logs', 'Journaux', ScrollText],
 		['moderation', 'Modération', ShieldCheck],
@@ -977,6 +998,244 @@
 									</button>
 								</div>
 							</form>
+						</section>
+					{/if}
+
+					{#if activeTab === 'componentsV2'}
+						<section class="mt-10">
+							<div>
+								<p class="text-sm font-medium text-violet-300">Messages Discord</p>
+								<h2 class="mt-2 text-2xl font-semibold">Créateur Components V2</h2>
+								<p class="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+									Compose un message moderne, visualise son rendu puis publie-le directement avec
+									Kepler. Les mentions sont neutralisées lors de l’envoi.
+								</p>
+							</div>
+
+							{#if form?.section === 'componentsV2' && form.message}
+								<div
+									class={[
+										'mt-6 rounded-xl border px-4 py-3 text-sm',
+										form.success
+											? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+											: 'border-red-400/20 bg-red-400/10 text-red-300'
+									]}
+									role="status"
+								>
+									{form.message}
+								</div>
+							{/if}
+
+							<div
+								class="mt-7 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]"
+							>
+								<form
+									method="POST"
+									action="?/publishComponentsV2"
+									class="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.035] p-6"
+								>
+									<label class="grid gap-2 text-sm">
+										<span class="font-medium text-zinc-300">Salon de publication</span>
+										<select
+											name="channel_id"
+											required
+											class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+										>
+											<option value="" disabled selected>Sélectionner un salon</option>
+											{#each data.channels as channel (channel.id)}
+												<option value={channel.id}>#{channel.name}</option>
+											{/each}
+										</select>
+									</label>
+
+									<div class="grid gap-5 sm:grid-cols-[minmax(0,1fr)_8rem]">
+										<label class="grid gap-2 text-sm">
+											<span class="font-medium text-zinc-300">Titre</span>
+											<input
+												name="title"
+												required
+												maxlength="200"
+												bind:value={componentTitle}
+												class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+											/>
+										</label>
+										<label class="grid gap-2 text-sm">
+											<span class="font-medium text-zinc-300">Accent</span>
+											<input
+												name="accent_color"
+												type="color"
+												bind:value={componentColor}
+												class="h-[46px] w-full cursor-pointer rounded-xl border border-white/10 bg-zinc-900 p-1.5"
+											/>
+										</label>
+									</div>
+
+									<label class="grid gap-2 text-sm">
+										<span class="flex items-center justify-between gap-3 font-medium text-zinc-300">
+											Contenu Markdown
+											<span class="text-xs font-normal text-zinc-600">
+												{componentDescription.length}/3500
+											</span>
+										</span>
+										<textarea
+											name="description"
+											required
+											maxlength="3500"
+											rows="8"
+											bind:value={componentDescription}
+											class="resize-y rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none focus:border-violet-400/60"
+										></textarea>
+										<span class="text-xs text-zinc-600">
+											Discord interprétera le gras, les listes, les liens et les autres éléments
+											Markdown.
+										</span>
+									</label>
+
+									<div class="grid gap-5 md:grid-cols-2">
+										<label class="grid gap-2 text-sm">
+											<span class="font-medium text-zinc-300">URL de la miniature</span>
+											<input
+												name="thumbnail_url"
+												type="url"
+												placeholder="https://…"
+												bind:value={componentThumbnailUrl}
+												class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none placeholder:text-zinc-700 focus:border-violet-400/60"
+											/>
+										</label>
+										<label class="grid gap-2 text-sm">
+											<span class="font-medium text-zinc-300">URL de la bannière</span>
+											<input
+												name="image_url"
+												type="url"
+												placeholder="https://…"
+												bind:value={componentImageUrl}
+												class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none placeholder:text-zinc-700 focus:border-violet-400/60"
+											/>
+										</label>
+									</div>
+
+									<label class="grid gap-2 text-sm">
+										<span class="font-medium text-zinc-300">Texte secondaire</span>
+										<input
+											name="footer"
+											maxlength="300"
+											placeholder="Informations complémentaires"
+											bind:value={componentFooter}
+											class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none placeholder:text-zinc-700 focus:border-violet-400/60"
+										/>
+									</label>
+
+									<div class="grid gap-5 border-t border-white/[0.07] pt-5 md:grid-cols-2">
+										<label class="grid gap-2 text-sm">
+											<span class="font-medium text-zinc-300">Texte du bouton-lien</span>
+											<input
+												name="button_label"
+												maxlength="80"
+												placeholder="En savoir plus"
+												bind:value={componentButtonLabel}
+												class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none placeholder:text-zinc-700 focus:border-violet-400/60"
+											/>
+										</label>
+										<label class="grid gap-2 text-sm">
+											<span class="font-medium text-zinc-300">URL du bouton</span>
+											<input
+												name="button_url"
+												type="url"
+												placeholder="https://…"
+												bind:value={componentButtonUrl}
+												class="rounded-xl border border-white/10 bg-zinc-900 px-3 py-3 text-zinc-100 transition outline-none placeholder:text-zinc-700 focus:border-violet-400/60"
+											/>
+										</label>
+									</div>
+
+									<div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+										<p class="max-w-md text-xs leading-5 text-zinc-600">
+											La publication est immédiate et ne remplace aucun message existant.
+										</p>
+										<button
+											type="submit"
+											class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400"
+										>
+											Publier dans Discord
+										</button>
+									</div>
+								</form>
+
+								<div class="xl:sticky xl:top-6">
+									<p class="mb-3 text-xs font-semibold tracking-wider text-zinc-500 uppercase">
+										Aperçu Discord
+									</p>
+									<div class="rounded-2xl border border-white/[0.08] bg-[#313338] p-4 shadow-2xl">
+										<div class="flex items-start gap-3">
+											<div
+												class="grid size-10 shrink-0 place-items-center rounded-full bg-violet-500 font-bold text-white"
+											>
+												K
+											</div>
+											<div class="min-w-0 flex-1">
+												<div class="flex flex-wrap items-center gap-2">
+													<span class="font-medium text-white">Kepler</span>
+													<span
+														class="rounded bg-[#5865f2] px-1 text-[10px] font-semibold text-white"
+													>
+														APP
+													</span>
+													<span class="text-xs text-[#949ba4]">Aujourd’hui à 12:00</span>
+												</div>
+
+												<div
+													class="relative mt-2 overflow-hidden rounded-lg border border-black/20 bg-[#2b2d31] p-4"
+													style={`border-left: 4px solid ${componentColor}`}
+												>
+													<div class="flex gap-4">
+														<div class="min-w-0 flex-1">
+															<p class="text-lg font-semibold text-white">
+																{componentTitle || 'Titre du message'}
+															</p>
+															<p class="mt-2 text-sm leading-6 whitespace-pre-wrap text-[#dbdee1]">
+																{componentDescription || 'Contenu du message'}
+															</p>
+														</div>
+														{#if componentThumbnailUrl}
+															<img
+																src={componentThumbnailUrl}
+																alt=""
+																class="size-20 shrink-0 rounded-lg object-cover"
+																referrerpolicy="no-referrer"
+															/>
+														{/if}
+													</div>
+
+													{#if componentImageUrl}
+														<div class="mt-4 border-t border-white/10 pt-4">
+															<img
+																src={componentImageUrl}
+																alt=""
+																class="max-h-72 w-full rounded-lg object-cover"
+																referrerpolicy="no-referrer"
+															/>
+														</div>
+													{/if}
+
+													{#if componentFooter}
+														<p class="mt-4 border-t border-white/10 pt-3 text-xs text-[#949ba4]">
+															{componentFooter}
+														</p>
+													{/if}
+
+													{#if componentButtonLabel}
+														<span
+															class="mt-4 inline-flex rounded bg-[#4e5058] px-4 py-2 text-sm font-medium text-white"
+														>
+															{componentButtonLabel}
+														</span>
+													{/if}
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
 						</section>
 					{/if}
 

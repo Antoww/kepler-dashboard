@@ -8,6 +8,7 @@ import {
 	getGuildRoles,
 	getGuildStats,
 	getManageableGuilds,
+	publishComponentsV2Message,
 	publishTicketPanel
 } from '$lib/server/auth/discord';
 import { getSession } from '$lib/server/auth/session';
@@ -35,6 +36,17 @@ const TIMEZONES = [
 	'UTC'
 ];
 const TICKET_STYLES = ['Primary', 'Secondary', 'Success', 'Danger'];
+const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
+
+function optionalHttpUrl(value: string): string | null {
+	if (!value) return '';
+	try {
+		const url = new URL(value);
+		return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null;
+	} catch {
+		return null;
+	}
+}
 
 export const load: PageServerLoad = async ({ cookies, params }) => {
 	const session = await getSession(cookies);
@@ -125,6 +137,87 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 };
 
 export const actions: Actions = {
+	publishComponentsV2: async ({ cookies, params, request }) => {
+		const session = await getSession(cookies);
+		if (!session) redirect(303, '/');
+
+		const guildId = params.guildId;
+		if (!(await getManageableGuilds(session.accessToken)).some((guild) => guild.id === guildId)) {
+			return fail(403, { section: 'componentsV2', message: 'Tu ne peux plus gérer ce serveur.' });
+		}
+
+		const botToken = getBotToken();
+		if (!(await getBotGuildIds(botToken)).has(guildId)) {
+			return fail(404, {
+				section: 'componentsV2',
+				message: "Kepler n'est plus présent sur ce serveur."
+			});
+		}
+
+		const formData = await request.formData();
+		const channelId = String(formData.get('channel_id') || '');
+		const title = String(formData.get('title') || '').trim();
+		const description = String(formData.get('description') || '').trim();
+		const accentColor = String(formData.get('accent_color') || '').trim();
+		const thumbnailUrl = optionalHttpUrl(String(formData.get('thumbnail_url') || '').trim());
+		const imageUrl = optionalHttpUrl(String(formData.get('image_url') || '').trim());
+		const footer = String(formData.get('footer') || '').trim();
+		const buttonLabel = String(formData.get('button_label') || '').trim();
+		const buttonUrl = optionalHttpUrl(String(formData.get('button_url') || '').trim());
+
+		if (!(await getGuildChannels(guildId, botToken)).some(({ id }) => id === channelId)) {
+			return fail(400, { section: 'componentsV2', message: 'Le salon sélectionné est invalide.' });
+		}
+		if (!title || title.length > 200 || !description || description.length > 3500) {
+			return fail(400, {
+				section: 'componentsV2',
+				message: 'Le titre ou le contenu dépasse les limites autorisées.'
+			});
+		}
+		if (!HEX_COLOR.test(accentColor)) {
+			return fail(400, { section: 'componentsV2', message: "La couleur d'accent est invalide." });
+		}
+		if (thumbnailUrl === null || imageUrl === null || buttonUrl === null) {
+			return fail(400, {
+				section: 'componentsV2',
+				message: 'Une des URL renseignées est invalide.'
+			});
+		}
+		if (
+			footer.length > 300 ||
+			buttonLabel.length > 80 ||
+			Boolean(buttonLabel) !== Boolean(buttonUrl)
+		) {
+			return fail(400, {
+				section: 'componentsV2',
+				message: 'Le texte secondaire ou le bouton est invalide.'
+			});
+		}
+
+		try {
+			const published = await publishComponentsV2Message(channelId, botToken, {
+				title,
+				description,
+				accentColor: Number.parseInt(accentColor.slice(1), 16),
+				thumbnailUrl: thumbnailUrl || undefined,
+				imageUrl: imageUrl || undefined,
+				footer: footer || undefined,
+				buttonLabel: buttonLabel || undefined,
+				buttonUrl: buttonUrl || undefined
+			});
+			return {
+				success: true,
+				section: 'componentsV2',
+				message: `Message Components V2 publié dans Discord (${published.id}).`
+			};
+		} catch (cause) {
+			console.error('Unable to publish Components V2 message', cause);
+			return fail(502, {
+				section: 'componentsV2',
+				message: 'Discord a refusé la publication. Vérifie les URL et les permissions de Kepler.'
+			});
+		}
+	},
 	general: async ({ cookies, params, request }) => {
 		const session = await getSession(cookies);
 		if (!session) redirect(303, '/');
