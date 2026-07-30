@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base, resolve } from '$app/paths';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
+	import SiteFooter from '$lib/components/SiteFooter.svelte';
 
 	let { data } = $props();
 
@@ -329,16 +330,6 @@
 			</section>
 		</main>
 
-		<footer class="border-t border-white/[0.06]">
-			<div
-				class="mx-auto flex max-w-7xl flex-col gap-5 px-6 py-8 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between lg:px-8"
-			>
-				<div class="flex items-center gap-2">
-					<img src={`${base}/favicon.svg`} alt="" class="size-6 rounded-lg" />
-					<span class="font-medium text-zinc-400">Kepler</span>
-				</div>
-				<p>Un bot français développé pour les communautés Discord.</p>
-			</div>
-		</footer>
+		<SiteFooter />
 	</div>
 </div>

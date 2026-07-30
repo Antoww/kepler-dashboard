@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
+	import SiteFooter from '$lib/components/SiteFooter.svelte';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Cake from '@lucide/svelte/icons/cake';
 	import ChartNoAxesColumnIncreasing from '@lucide/svelte/icons/chart-no-axes-column-increasing';
@@ -1253,4 +1254,5 @@
 			</div>
 		</div>
 	</main>
+	<SiteFooter compact />
 </div>

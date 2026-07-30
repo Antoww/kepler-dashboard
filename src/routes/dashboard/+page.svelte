@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
+	import SiteFooter from '$lib/components/SiteFooter.svelte';
 
 	let { data } = $props();
 
@@ -135,4 +136,5 @@
 			{/if}
 		</section>
 	</main>
+	<SiteFooter compact />
 </div>
