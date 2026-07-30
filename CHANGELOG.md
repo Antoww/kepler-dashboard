@@ -10,23 +10,7 @@ le projet utilisera [Semantic Versioning](https://semver.org/lang/fr/).
 
 ### Ajouté
 
-- Créateur de messages Discord Components V2 avec aperçu en direct.
-- Page publique de changelog synchronisée avec les releases GitHub.
-- Footer commun pour l’accueil et les pages du dashboard.
-- Environnements Cloudflare distincts pour les bots de développement et de
-  production.
-
-### Modifié
-
 - À compléter au fil des changements.
-
-### Corrigé
-
-- À compléter au fil des corrections.
-
-### Sécurité
-
-- À compléter lorsqu’une modification concerne la sécurité.
 
 ## [0.1.0] - 2026-07-30
 
@@ -39,6 +23,11 @@ le projet utilisera [Semantic Versioning](https://semver.org/lang/fr/).
   signalements et tickets.
 - Publication et remplacement du panneau de tickets dans Discord.
 - Statistiques du serveur, graphiques d’activité et classements.
+- Créateur de messages Discord Components V2 avec aperçu en direct.
+- Page publique de changelog synchronisée avec les releases GitHub.
+- Footer commun pour l’accueil et les pages du dashboard.
+- Environnements Cloudflare distincts pour les bots de développement et de
+  production.
 - Interface responsive SvelteKit et Tailwind CSS.
 - Déploiement du dashboard sur Cloudflare Workers.
 
